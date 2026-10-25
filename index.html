@@ -69,7 +69,8 @@ ol.rank li.me{border-color:var(--accent)}
 ol.rank .no{font-size:20px;font-weight:bold;text-align:center}
 ol.rank .nm{font-size:17px;display:flex;align-items:center;min-width:0}
 ol.rank .nm>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-ol.rank .nm .ttl{flex-shrink:0}  /* 名前が長くても称号は切らない */
+ol.rank .nm .ttl,ol.rank .nm .barmark{flex-shrink:0}
+.barmark{margin-left:6px;padding:0 5px;border:1px solid var(--sub);border-radius:6px;font-size:11px;color:var(--sub)}  /* 名前が長くても称号は切らない */
 ol.rank .sc{font-size:18px;font-weight:bold;font-variant-numeric:tabular-nums;text-align:right}
 ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:normal}
 .ttl{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:12px;font-weight:bold;color:#fff;background:var(--title);vertical-align:2px}
@@ -155,18 +156,18 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
     <div class="panel"><ol>
       <li>棒人間がブランコでゆれています。左から右へ、つぎのブランコに飛びうつろう。</li>
       <li><b>音</b>:ゆれに合わせて「キュイーン」と音がだんだん高くなります。<b>いちばん高くなって「キン!」と鳴った瞬間</b>に手をはなします。そのあと音は下がって、次のゆれでまた上がります(ブランコ1往復で音も1周)。</li>
-      <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。下のバーの針がまん中の線に来た時も同じです。</li>
+      <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
     </ol></div>
     <div class="panel judges" aria-label="判定の種類">
-      <span>★ クリティカル</span><span>ずれ0.07秒以内(進むほどきびしくなって、最後は0.045秒)。<b>ブランコを1つ飛ばして大ジャンプ!</b> 点数も大きい</span>
-      <span>◎ ナイス</span><span>ずれ0.16秒以内</span>
-      <span>○ セーフ</span><span>ずれ0.3秒以内。なんとかつかまる</span>
+      <span>★ クリティカル</span><span>ずれ0.07秒以内(進むほどきびしくなって、最後は0.04秒)。<b>ブランコを1つ飛ばして大ジャンプ!</b> 点数も大きい</span>
+      <span>◎ ナイス</span><span>ずれ0.16秒以内(最後は0.11秒)</span>
+      <span>○ セーフ</span><span>ずれ0.3秒以内(最後は0.23秒)。なんとかつかまる</span>
       <span>× ミス</span><span>ネットに落ちてライフが1つへる(3つでおわり)</span>
     </div>
     <div class="panel">
-      <p>連続で成功するとコンボで点数アップ。進むほどブランコが速くなります。</p>
+      <p>連続で成功するとコンボで点数アップ。進むほどブランコが速くなり、とちゅうからはブランコごとに速さがバラバラになります。合図の音と光は、そのブランコの速さに合わせて出ます。</p>
       <div class="demo-lamps" aria-hidden="true"><div class="lamp" data-l="0">1</div><div class="lamp" data-l="1">2</div><div class="lamp" data-l="2">3</div><div class="lamp big" data-l="3">今</div></div>
       <button class="btn ghost" id="demoBtn">合図を聞いてみる・見てみる</button>
     </div>
@@ -183,6 +184,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <label class="set">ゲーム中の声(判定を読み上げ)<input type="checkbox" id="sVoice"></label>
       <label class="set">合図で振動(スマホ)<input type="checkbox" id="sVib"></label>
       <label class="set">はなす位置のガイドを表示<input type="checkbox" id="sGuide"></label>
+      <label class="set"><span>下のタイミングバーを表示<br><small class="note">オンにすると点数 ×0.8(れんしゅうは そのまま)</small></span><input type="checkbox" id="sBar"></label>
       <label class="set">動きを減らす(回転・ゆれなし)<input type="checkbox" id="sCalm"></label>
       <label class="set">タイミング補正<input type="range" id="sOff" min="-200" max="200" step="10"><span class="val" id="vOff"></span></label>
     </div>
@@ -236,6 +238,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
     <p class="taunt" id="taunt"></p>
     <div class="big-score" id="rScore">0</div>
     <p class="next-goal" id="nextGoal"></p>
+    <p class="note" id="barNote"></p>
     <div class="stats">
       <div>きょり<b id="rDist">0m</b></div>
       <div>クリティカル<b id="rCrit">0</b></div>
@@ -267,7 +270,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('sorabura_' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('sorabura_' + k); } catch (e) {} },
 };
-const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0 }, store.get('settings', {}));
+const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false }, store.get('settings', {}));
 let account = store.get('account', null);   // {name, token}
 
 /* ---------- 読み上げ ---------- */
@@ -474,13 +477,14 @@ function bindSettings() {
     $('vOff').textContent = (settings.offset > 0 ? '+' : '') + settings.offset + 'ms';
   };
   $('sVol').value = settings.vol * 100; $('sVoice').checked = settings.voice; $('sVib').checked = settings.vib;
-  $('sGuide').checked = settings.guide; $('sCalm').checked = settings.calm; $('sOff').value = settings.offset; upd();
+  $('sGuide').checked = settings.guide; $('sBar').checked = settings.bar; $('sCalm').checked = settings.calm; $('sOff').value = settings.offset; upd();
   const save = () => { store.set('settings', settings); if (master) master.gain.value = settings.vol; upd(); };
   $('sVol').addEventListener('input', e => { settings.vol = e.target.value / 100; save(); });
   $('sVol').addEventListener('change', () => { audioInit(); SFX.safe(); });
   $('sVoice').addEventListener('change', e => { settings.voice = e.target.checked; save(); });
   $('sVib').addEventListener('change', e => { settings.vib = e.target.checked; save(); });
   $('sGuide').addEventListener('change', e => { settings.guide = e.target.checked; save(); });
+  $('sBar').addEventListener('change', e => { settings.bar = e.target.checked; save(); });
   $('sCalm').addEventListener('change', e => { settings.calm = e.target.checked; save(); });
   $('sOff').addEventListener('input', e => { settings.offset = +e.target.value; save(); });
 }
@@ -505,11 +509,21 @@ $('demoBtn').addEventListener('click', () => {
 const W = { H: 540, gap: 300, pivotY: 46, rope: 232, netY: 492, A: 0.95, x0: 160 };
 const BEAT_MS = 240;               // あそびかたのデモで使うランプの間かく
 const gapMs = () => periodMs() * 0.1;   // ランプ1つ分(音が上がりきるまでの 1/4)
-// 判定の幅(ミリ秒)。クリティカルは最初 ±70ms で、ブランコが速くなるほどせまくなり、いちばん速いと ±45ms
+// 判定の幅(ミリ秒)。つかまった回数が増えるほどせまくなる(30回で最大)
+//   クリティカル ±70 → ±40、ナイス ±160 → ±110、セーフ ±300 → ±230
+const progress = () => G ? Math.min(1, G.catches / 30) : 0;
 const WIN = {
-  get crit() { const k = G ? Math.min(1, Math.max(0, (2.4 - G.period) / 1.05)) : 0; return Math.round(70 - 25 * k); },
-  nice: 160, safe: 300,
+  get crit() { return Math.round(70 - 30 * progress()); },
+  get nice() { return Math.round(160 - 50 * progress()); },
+  get safe() { return Math.round(300 - 70 * progress()); },
 };
+// つぎのブランコの速さ(1往復の秒数)。だんだん速くなって 1.0 秒まで。
+// 15回目からはブランコごとに速さを少しずつ変えて(最大±15%)、同じリズムで押し続けられないようにする
+function nextPeriod(catches) {
+  const base = Math.max(1.0, 2.4 * Math.pow(0.97, catches));
+  const amp = 0.15 * Math.min(1, Math.max(0, (catches - 15) / 15));
+  return Math.max(0.9, base * (1 + (Math.random() * 2 - 1) * amp));
+}
 const TARGET_PHASE = 0.40;         // 1回のゆれのうち、はなす瞬間(前にふり上がる途中)
 const MAX_CYCLES = 4;              // 合図は4回まで。そのあと手がすべる
 const OMEGA2 = Math.pow(2 * Math.PI / 2.4, 2);
@@ -549,7 +563,7 @@ function newGame(practice) {
   resize();
   const now = performance.now();
   G = {
-    practice, state: 'swing', i: 0, t0: now + 1600, period: 2.4,
+    practice, bar: settings.bar, state: 'swing', i: 0, t0: now + 1600, period: 2.4,
     lives: practice ? Infinity : 3, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0,
     startAt: now, pausedTotal: 0, pausedAt: 0, paused: false,
     traps: new Map(), sched: new Map(), lit: new Set(), fly: null, net: null, pop: null, cam: 0, lastT: now,
@@ -608,8 +622,8 @@ function judge(kind, err) {
   else {
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
     if (kind === 'crit') { G.crits++; SFX.crit(); vibrate([30, 30, 90]); } else if (kind === 'nice') SFX.nice(); else SFX.safe();
-    const mult = 1 + Math.min(G.combo - 1, 20) * 0.1, speed = 2.4 / G.period;
-    G.score += Math.round(J.base * mult * speed);
+    const mult = 1 + Math.min(G.combo - 1, 20) * 0.1, speed = Math.min(2.4 / 1.35, 2.4 / G.period);
+    G.score += Math.round(J.base * mult * speed * (G.bar && !G.practice ? 0.8 : 1));   // バーありは ×0.8
   }
   const ms = Math.round(err);
   const sub = kind === 'crit' && Math.abs(ms) <= 30 ? 'ぴったり!' : (ms < 0 ? 'はやい ' + (-ms) + 'ms' : 'おそい ' + ms + 'ms');
@@ -654,7 +668,7 @@ function update(now, dt) {
     swingUpdate(2.2 * (1 - Math.abs(s - 0.5) * 1.4), 0);
     if (s >= 1) {
       G.i = F.j; G.catches++; G.state = 'swing'; G.fly = null;
-      G.period = Math.max(1.35, 2.4 - 0.05 * G.catches);
+      G.period = nextPeriod(G.catches);
       G.t0 = now; G.lit.clear(); G.sched.clear();
       SFX.grab(); updateHud();
     }
@@ -782,7 +796,7 @@ function draw(now) {
   drawStick(G.pose);
   ctx.restore();
 
-  drawLamps(now, nt); drawBar(now, nt); drawPop(now);
+  drawLamps(now, nt); if (G.bar) drawBar(now, nt); drawPop(now);
   if (G.state === 'swing' && now < G.t0) bigText(G.catches === 0 && G.lives === (G.practice ? Infinity : 3) ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
   if (G.hint && G.state === 'swing' && G.catches === 0) {
     ctx.fillStyle = C.hint; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
@@ -944,7 +958,7 @@ function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); } swingS
 let lastPractice = false;
 function gameOver() {
   G.over = true; cancelBeats(); swingStop(); SFX.over();
-  const res = { lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
+  const res = { bar: G.bar && !G.practice, lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
   setTimeout(() => { endGame(); showResult(res); }, 1200);
 }
 /* ---------- 煽り文句(もう一回やりたくなるように)---------- */
@@ -995,19 +1009,20 @@ async function showResult(r) {
   if (isNewBest) store.set('bestDist', r.dist);
   const t = tauntFor(r.dist, prevDist, isNewBest, r.lastMiss);
   $('taunt').textContent = t.main; $('nextGoal').textContent = t.sub;
-  const head = t.main + '。' + (t.sub ? t.sub + '。' : '') + 'スコア ' + r.score + '点、きょり ' + r.dist + 'メートル、クリティカル ' + r.crit + '回、最大コンボ ' + r.combo + '。';
+  $('barNote').textContent = r.bar ? 'タイミングバーあり(点数 ×0.8)' : '';
+  const head = t.main + '。' + (t.sub ? t.sub + '。' : '') + 'スコア ' + r.score + '点' + (r.bar ? '(タイミングバーあり)' : '') + '、きょり ' + r.dist + 'メートル、クリティカル ' + r.crit + '回、最大コンボ ' + r.combo + '。';
   // live:あとから(通信のあとに)わかったことは、ライブリージョンでも読む
   const note = (text, live) => { $('resultMsg').textContent = text; $('resSr').textContent = '。' + head + text; if (live) announce(text); };
   $('resSr').textContent = '。' + head;
   show('result');
   if (r.practice) { note('れんしゅうなのでランキングには入りません'); return; }
   // この端末のランキング
-  const local = store.get('local', []); local.push({ name: account ? account.name : 'ゲスト', score: r.score, dist: r.dist, date: new Date().toLocaleDateString('ja-JP') });
+  const local = store.get('local', []); local.push({ name: account ? account.name : 'ゲスト', score: r.score, dist: r.dist, bar: r.bar, date: new Date().toLocaleDateString('ja-JP') });
   local.sort((a, b) => b.score - a.score || b.dist - a.dist); store.set('local', local.slice(0, 20));
   if (!CONFIG.SERVER_URL) { note('この端末のランキングに記録しました'); return; }
   if (!account) { note('ゲストなのでオンラインランキングには送りません(ログインすると参加できます)'); return; }
   note('ランキングに送っています…');
-  const data = { score: r.score, dist: r.dist, crit: r.crit, combo: r.combo, sec: r.sec };
+  const data = { score: r.score, dist: r.dist, crit: r.crit, combo: r.combo, sec: r.sec, bar: r.bar ? 1 : 0 };
   try {
     const res = await apiPost(Object.assign({ action: 'score', name: account.name, token: account.token }, data));
     if (res.ok) {
@@ -1045,6 +1060,7 @@ function renderRank(list, meName, me) {
     const no = document.createElement('span'); no.className = 'no'; no.innerHTML = '<span></span><span class="sr-only">位、</span>'; no.firstChild.textContent = e.rank;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.appendChild(document.createElement('span')).textContent = e.name;
     const t = titleOf(e.titles); if (t) { const b = document.createElement('span'); b.className = 'ttl'; b.textContent = t; nm.appendChild(b); }
+    if (e.bar) { const b = document.createElement('span'); b.className = 'barmark'; b.textContent = 'バーあり'; nm.appendChild(b); }
     const sc = document.createElement('span'); sc.className = 'sc'; sc.innerHTML = '<span></span><small></small>';
     sc.firstChild.textContent = e.score.toLocaleString(); sc.firstChild.insertAdjacentHTML('beforeend', '<span class="sr-only">点、きょり</span>');
     sc.lastChild.innerHTML = '<span aria-hidden="true"></span><span class="sr-only"></span>';
