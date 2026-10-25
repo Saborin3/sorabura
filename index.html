@@ -164,7 +164,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <span>★ クリティカル</span><span>ずれ0.07秒以内(進むほどきびしくなって、最後は0.04秒)。<b>ブランコを1つ飛ばして大ジャンプ!</b> 点数も大きい</span>
       <span>◎ ナイス</span><span>ずれ0.16秒以内(最後は0.11秒)</span>
       <span>○ セーフ</span><span>ずれ0.3秒以内(最後は0.23秒)。なんとかつかまる</span>
-      <span>× ミス</span><span>ネットに落ちてライフが1つへる(3つでおわり)</span>
+      <span>× ミス</span><span>ネットに落ちたら、そこでおしまい(一発勝負)。れんしゅうなら何回でもやり直せます</span>
     </div>
     <div class="panel">
       <p>連続で成功するとコンボで点数アップ。進むほどブランコが速くなり、とちゅうからはブランコごとに速さがバラバラになります。合図の音と光は、そのブランコの速さに合わせて出ます。</p>
@@ -210,13 +210,13 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
 
 <!-- ゲーム -->
 <section id="game" class="screen hidden" aria-label="ゲーム">
-  <div id="stage" tabindex="0" role="application" aria-label="ゲーム画面。音がだんだん高くなり、いちばん高い「キン」の音で、スペースキーかEnterで手をはなします。Sキーでスコアとライフを読み上げ。Escで一時停止。">
+  <div id="stage" tabindex="0" role="application" aria-label="ゲーム画面。音がだんだん高くなり、いちばん高い「キン」の音で、スペースキーかEnterで手をはなします。Sキーでスコアときょりを読み上げ。Escで一時停止。">
     <canvas id="cv" aria-hidden="true"></canvas>
   </div>
   <div id="hud">
     <div class="box" aria-hidden="true">スコア<b id="hScore">0</b></div>
     <div class="box" aria-hidden="true">きょり<b id="hDist">0m</b></div>
-    <div class="box" aria-hidden="true">ライフ<b id="hLife">♥♥♥</b></div>
+    <div class="box" aria-hidden="true">モード<b id="hLife">一発勝負</b></div>
     <div class="box" aria-hidden="true">コンボ<b id="hCombo">0</b></div>
     <div class="grow"></div>
     <button id="pauseBtn" aria-label="一時停止">II</button>
@@ -260,8 +260,8 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
    設定(サーバーを使うときはここを書きかえる)
    ========================================================= */
 const CONFIG = {
-  SERVER_URL: 'https://script.google.com/macros/s/AKfycbyhlaIq-AtDrSCHkJyOfJ-nvWYIESqBT35-Z2cE_0JAY4F1hBpGEGoURT3V-s7D-wXf/exec',                 // GASのウェブアプリのURL(https://script.google.com/macros/s/……/exec)。空ならこの端末だけのランキング
-  KEY: 'soratoburin1025',      // ranking_server.gs の SECRET と同じにする
+  SERVER_URL: '',                 // GASのウェブアプリのURL(https://script.google.com/macros/s/……/exec)。空ならこの端末だけのランキング
+  KEY: 'sorabura-change-me',      // ranking_server.gs の SECRET と同じにする
 };
 
 const $ = id => document.getElementById(id);
@@ -564,7 +564,7 @@ function newGame(practice) {
   const now = performance.now();
   G = {
     practice, bar: settings.bar, state: 'swing', i: 0, t0: now + 1600, period: 2.4,
-    lives: practice ? Infinity : 3, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0,
+    lives: practice ? Infinity : 1, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0,   // 本番は1回ミスしたらおしまい
     startAt: now, pausedTotal: 0, pausedAt: 0, paused: false,
     traps: new Map(), sched: new Map(), lit: new Set(), fly: null, net: null, pop: null, cam: 0, lastT: now,
     pose: { x: 0, y: 0, ang: -W.A, mode: 'hang' }, lastErr: null, hint: practice ? 2 : 1, over: false,
@@ -699,7 +699,7 @@ function update(now, dt) {
 function updateHud() {
   $('hScore').textContent = G.score.toLocaleString();
   $('hDist').textContent = G.i * 5 + 'm';
-  $('hLife').textContent = G.practice ? '∞' : ('♥'.repeat(Math.max(0, G.lives)) + '♡'.repeat(Math.max(0, 3 - G.lives)));
+  $('hLife').textContent = G.practice ? 'れんしゅう' : '一発勝負';
   $('hCombo').textContent = G.combo;
 }
 
@@ -797,7 +797,7 @@ function draw(now) {
   ctx.restore();
 
   drawLamps(now, nt); if (G.bar) drawBar(now, nt); drawPop(now);
-  if (G.state === 'swing' && now < G.t0) bigText(G.catches === 0 && G.lives === (G.practice ? Infinity : 3) ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
+  if (G.state === 'swing' && now < G.t0) bigText(G.catches === 0 && !G.lastMiss ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
   if (G.hint && G.state === 'swing' && G.catches === 0) {
     ctx.fillStyle = C.hint; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('音がいちばん高い「キン!」・「今」が光ったら はなす', w / 2, 142);
@@ -926,7 +926,7 @@ document.addEventListener('keydown', e => {
 
 function sayStatus() {
   if (!G) return;
-  const t = 'スコア ' + G.score + '、きょり ' + G.i * 5 + 'メートル、' + (G.practice ? 'れんしゅう中' : 'ライフ ' + G.lives) + '、コンボ ' + G.combo;
+  const t = 'スコア ' + G.score + '、きょり ' + G.i * 5 + 'メートル、' + (G.practice ? 'れんしゅう中' : '一発勝負') + '、コンボ ' + G.combo;
   if (settings.voice && 'speechSynthesis' in window) say(t); else announce(t);
 }
 
@@ -959,7 +959,7 @@ let lastPractice = false;
 function gameOver() {
   G.over = true; cancelBeats(); swingStop(); SFX.over();
   const res = { bar: G.bar && !G.practice, lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
-  setTimeout(() => { endGame(); showResult(res); }, 1200);
+  setTimeout(() => { endGame(); showResult(res); }, 600);   // 一発勝負なので、すぐ結果へ(「もう一回」を押しやすく)
 }
 /* ---------- 煽り文句(もう一回やりたくなるように)---------- */
 // きょりを身近なものとくらべる。いくつか用意して、毎回ちがうのが出るように
