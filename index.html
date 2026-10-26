@@ -163,7 +163,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
       <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
-      <li><b>鳥</b>:75mをこえると、ときどき鳥が飛んできて「チュイッ」と鳴いたり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
+      <li><b>鳥</b>:75mをこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
     </ol></div>
     <div class="panel judges" aria-label="判定の種類">
@@ -366,8 +366,26 @@ const SFX = {
   // スローの始まり「カチッ」(時計の針の音)と、終わりの「ピッ」
   kachi() { if (!ac) return; const t = ac.currentTime + 0.09; noiseHit(t, 0.03, 4200, 0.9); tone({ f: 1900, at: t, dur: 0.03, type: 'square', vol: 0.22 }); tone({ f: 950, at: t + 0.012, dur: 0.05, type: 'square', vol: 0.12 }); },
   pi() { if (!ac) return; tone({ f: 1568, at: ac.currentTime + 0.09, dur: 0.1, type: 'square', vol: 0.2 }); },
-  // 鳥の鳴き声(「キン!」とまぎらわしくならないように、短くて上がる「チュイッ」)
-  chirp(at, pan) { const out = []; [[2600, 3900, 0], [3000, 4300, 0.075]].forEach(([f, to, d]) => out.push(tone({ f, to, at: at + d, dur: 0.06, type: 'triangle', vol: 0.16, pan }))); return out; },
+  // 鳥の鳴き声。小鳥のさえずりのように、高い音が速くふるえながら上下する「ピチュピチュ」「チュリリ」
+  // (合図の「キン!」はふるえない一定の音なので、聞き分けられる)
+  chirp(at, pan) {
+    if (!ac) return [];
+    const out = [], song = BIRD_SONGS[Math.floor(Math.random() * BIRD_SONGS.length)];
+    let p = null; if (ac.createStereoPanner) { p = ac.createStereoPanner(); p.pan.value = pan; p.connect(master); }
+    song.forEach(([d, len, f0, f1, f2]) => {
+      const t = Math.max(ac.currentTime, at + d);
+      const o = ac.createOscillator(), g = ac.createGain(), tr = ac.createOscillator(), trG = ac.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + len * 0.45); o.frequency.exponentialRampToValueAtTime(f2, t + len);
+      tr.frequency.value = 38 + Math.random() * 12; trG.gain.value = f1 * 0.06;   // 速いふるえ(さえずりっぽさ)
+      tr.connect(trG); trG.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.34, t + 0.008); g.gain.exponentialRampToValueAtTime(0.12, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g); g.connect(p || master);
+      o.start(t); o.stop(t + len + 0.02); tr.start(t); tr.stop(t + len + 0.02);
+      out.push({ osc: o, g }, { osc: tr, g: trG });
+    });
+    return out;
+  },
   net() { tone({ f: 160, to: 320, dur: 0.25, type: 'sine', vol: 0.45 }); },
   slip() { tone({ f: 520, to: 260, dur: 0.35, type: 'square', vol: 0.15 }); },
   start() { if (!ac) return; const t = ac.currentTime; [523, 659, 784].forEach((f, k) => tone({ f, at: t + k * 0.09, dur: 0.18, type: 'triangle', vol: 0.3 })); },
@@ -646,7 +664,14 @@ function cancelBeats() {
 /* ---------- スローと鳥 ---------- */
 const SLOW_SCORE = 100000;   // この点数をこえると、ときどきスローになる
 const SLOW_MUL = 1.6;        // スローのときのゆれの遅さ(1往復の時間が1.6倍)
-const BIRD_FROM = 15;        // 15回つかまったあと(75m)から、ときどき鳥が来る
+const BIRD_FROM = 15;
+// 鳴き声のパターン:[始まりのずれ(秒), 長さ, 始まりの高さ, まん中, 終わり](Hz)
+const BIRD_SONGS = [
+  [[0, 0.07, 3200, 5200, 3800], [0.09, 0.07, 3200, 5200, 3800]],                                   // ピチュ・ピチュ
+  [[0, 0.05, 4600, 3400, 4200], [0.06, 0.05, 4600, 3400, 4200], [0.12, 0.05, 4600, 3400, 4200], [0.18, 0.09, 3000, 4800, 2600]],   // チュリリリ・チュイッ
+  [[0, 0.12, 2600, 4400, 5000], [0.16, 0.06, 4800, 3600, 4300]],                                   // ヒーッ・チュッ
+];
+const BIRD_SONG_LEN = 0.3;   // いちばん長い鳴き声の長さ(秒)        // 15回つかまったあと(75m)から、ときどき鳥が来る
 function onGrabEvents(now) {
   // スロー:「カチッ」のあと遅くなり、何回かつかまると「ピッ」で元にもどる
   if (G.slowLeft > 0) {
@@ -664,10 +689,10 @@ function onGrabEvents(now) {
 function spawnBird(now) {
   const dur = 2600 + Math.random() * 1400, start = now + 300 + Math.random() * 900, dir = Math.random() < 0.5 ? 1 : -1;
   const chirps = []; let t = start + 150 + Math.random() * 250;
-  while (t < start + dur - 150) { chirps.push({ t, done: false }); t += 260 + Math.random() * 380; }
-  G.bird = { start, dur, dir, y: 70 + Math.random() * 60, chirps };
+  while (t < start + dur - 300) { chirps.push({ t, done: false }); t += 420 + Math.random() * 420; }
+  G.bird = { start, dur, dir, y: 80 + Math.random() * 50, chirps };
 }
-function birdX(b, now) { const s = (now - b.start) / b.dur, w = view.w + 120; return b.dir > 0 ? -60 + w * s : view.w + 60 - w * s; }
+function birdX(b, now) { const s = (now - b.start) / b.dur, w = view.w + 200; return b.dir > 0 ? -100 + w * s : view.w + 100 - w * s; }
 function updateBird(now) {
   const b = G.bird; if (!b) return;
   if (now > b.start + b.dur) { G.bird = null; return; }
@@ -677,7 +702,7 @@ function updateBird(now) {
   b.chirps.forEach(c => {
     if (c.done || c.t - now > 250 || c.t < now) return;
     c.done = true;
-    if (tg.some(x => Math.abs(x - c.t) < 90)) return;
+    if (tg.some(x => x > c.t - 90 && x < c.t + BIRD_SONG_LEN * 1000 + 90)) return;   // 鳴き声のどこかが「キン!」の±90msにかかるなら鳴かない
     const pan = Math.max(-0.9, Math.min(0.9, (birdX(b, c.t) / view.w) * 2 - 1));
     G.birdNodes.push(...SFX.chirp(aTime(realOf(c.t)), pan));
   });
@@ -924,8 +949,8 @@ function drawSlow(now) {
 function drawBird(now) {
   const b = G.bird; if (!b || now < b.start) return;
   const x = birdX(b, now), y = b.y + Math.sin(now / 180) * 8, f = Math.sin(now / 70) * (settings.calm ? 0.3 : 1);
-  ctx.save(); ctx.translate(x, y); ctx.scale(b.dir, 1);
-  ctx.fillStyle = C.hc ? C.text : '#1b1b1b'; ctx.strokeStyle = C.hc ? C.textStroke : '#f6f2e7'; ctx.lineWidth = 2;
+  ctx.save(); ctx.translate(x, y); ctx.scale(b.dir * 1.8, 1.8);
+  ctx.fillStyle = C.hc ? C.text : '#1b1b1b'; ctx.strokeStyle = C.hc ? C.textStroke : '#f6f2e7'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();                 // からだ
   ctx.beginPath(); ctx.moveTo(-6, -2); ctx.quadraticCurveTo(-14, -26 * f, -34, -18 * f - 6); ctx.lineTo(4, -4); ctx.fill(); ctx.stroke();   // はね
   ctx.beginPath(); ctx.arc(18, -6, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();                          // あたま
