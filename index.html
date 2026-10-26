@@ -101,7 +101,7 @@ ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:norm
 .stats b{display:block;font-size:22px;color:var(--ink)}
 #resultMsg{text-align:center;font-size:16px;min-height:1.7em}
 h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移すフォーカスの枠は出さない */
-.btn.hidden{display:none}
+.btn.hidden,.panel.hidden{display:none !important}
 .vo-note{margin-top:4px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink)}
 .taunt{font-size:22px;font-weight:bold;text-align:center;line-height:1.5;color:var(--ink)}
 .next-goal{text-align:center;font-size:16px;color:var(--crit);font-weight:bold;min-height:1.5em}
@@ -151,6 +151,19 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <button class="btn ghost small" id="toLogin">ログイン</button></div>
     <button class="btn" id="startBtn">はじめる</button>
     <button class="btn ghost" id="practiceBtn">れんしゅう(ミスしてもOK)</button>
+    <!-- テスト用(URLの最後に ?test をつけたときだけ出る)。れんしゅうなのでランキングには入らない -->
+    <label class="panel hidden" id="testBox" style="display:flex;flex-direction:column;gap:8px">
+      <span>テスト:れんしゅうを始める点数</span>
+      <select id="testScore" style="font:inherit;font-size:17px;padding:8px;border-radius:8px;width:100%">
+        <option value="0">0点(ふつう)</option>
+        <option value="49000">4万9千(もうすぐ鳥)</option>
+        <option value="99000">9万9千(もうすぐスロー)</option>
+        <option value="149000">14万9千(もうすぐスピードアップ)</option>
+        <option value="299000">29万9千(もうすぐゆれ幅チェンジ)</option>
+        <option value="499000">49万9千(もうすぐ強風)</option>
+        <option value="600000">60万(ぜんぶ入り)</option>
+      </select>
+    </label>
     <div class="row">
       <button class="btn ghost" id="toRanking">ランキング</button>
       <button class="btn ghost" id="toHowto">あそびかた</button>
@@ -1438,7 +1451,14 @@ async function loadRanking(mode) {
 
 /* ---------- タイトルのボタン ---------- */
 $('startBtn').addEventListener('click', () => newGame(false));
-$('practiceBtn').addEventListener('click', () => newGame(true));
+const TEST_MODE = /[?&]test\b/.test(location.search);
+if (TEST_MODE) $('testBox').classList.remove('hidden');
+$('practiceBtn').addEventListener('click', () => {
+  newGame(true);
+  const sc = TEST_MODE ? Number($('testScore').value) : 0;
+  // テスト:点数を先に入れておく。速さ・判定の幅も後半と同じにするため、つかまった回数も60回にする
+  if (sc > 0) { G.score = sc; G.catches = 60; updateHud(); }
+});
 $('toRanking').addEventListener('click', () => openRanking('title'));
 $('toHowto').addEventListener('click', () => show('howto', 'title'));
 $('toSettings').addEventListener('click', () => show('settings', 'title'));
