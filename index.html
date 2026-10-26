@@ -186,6 +186,8 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
       <li><b>スピードアップ</b>:スコアが15万点をこえると「タタタタン!」と鳴って、ブランコがさらに速くなっていきます。</li>
+      <li><b>ゆれ幅チェンジ</b>:30万点をこえると、ブランコごとにゆれの大きさがバラバラになります(「ここ」の位置が毎回かわります)。合図の音も、ブランコごとにいちばん高くなる高さがかわります。リズム(タイミング)は今までどおりなので、ランプと音のリズムをたよりに!</li>
+      <li><b>強風</b>:50万点をこえると、ときどき、飛んでいるあいだに「ビュオーッ」と風がふきます(画面を風の線が横切ります)。つぎのブランコをつかんだあと、音が上がっていくとちゅうで、ゆれが速くなったり遅くなったりします。合図の音と光は、そこから新しい速さで続きます。</li>
       <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:スコアが5万点をこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
@@ -367,30 +369,34 @@ function noiseHit(at, dur, freq, vol) {
 const SFX = {
   // 合図:ゆれ1回で1周する「キュイーン」。後ろの端から音が高くなっていき、
   // いちばん高いところ(=はなす瞬間)で「キン!」。そのあと下がって、次のゆれでまた上がる
-  cycle(start, target, end) {
+  cycle(start, target, end, pitch = 1) {   // pitch:いちばん高いところの高さ(30万点からブランコごとに変わる)
     if (!ac) return [];
     const out = [], st = Math.max(ac.currentTime, start);
+    // とちゅうから鳴らすとき(強風で速さが変わったとき)は、その時点の高さ・大きさから始める
+    const r = st > start ? Math.min(1, (st - start) / (target - start)) : 0;
+    const ex = (a, b) => a * Math.pow(b / a, r), li = (a, b) => a + (b - a) * r;
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 6;
-    lp.frequency.setValueAtTime(700, st); lp.frequency.exponentialRampToValueAtTime(5000, target); lp.frequency.exponentialRampToValueAtTime(600, end);
+    lp.frequency.setValueAtTime(ex(700, 5000), st); lp.frequency.exponentialRampToValueAtTime(5000, target); lp.frequency.exponentialRampToValueAtTime(600, end);
     lp.connect(master);
     // ゆらぎ(ビブラート)も上がるほど速くして、勢いがつく感じに
     const lfo = ac.createOscillator(), lfoG = ac.createGain();
-    lfo.frequency.setValueAtTime(5, st); lfo.frequency.linearRampToValueAtTime(16, target); lfo.frequency.linearRampToValueAtTime(4, end);
-    lfoG.gain.setValueAtTime(18, st); lfoG.gain.linearRampToValueAtTime(40, target); lfoG.gain.linearRampToValueAtTime(10, end);
+    lfo.frequency.setValueAtTime(li(5, 16), st); lfo.frequency.linearRampToValueAtTime(16, target); lfo.frequency.linearRampToValueAtTime(4, end);
+    lfoG.gain.setValueAtTime(li(18, 40), st); lfoG.gain.linearRampToValueAtTime(40, target); lfoG.gain.linearRampToValueAtTime(10, end);
     lfo.connect(lfoG); lfo.start(st); lfo.stop(end + 0.05); out.push({ osc: lfo, g: lfoG });
     [['sawtooth', 1, 0.11], ['square', 0.5, 0.05], ['sine', 2, 0.07]].forEach(([type, mul, v]) => {
       const o = ac.createOscillator(), g = ac.createGain(); o.type = type;
-      o.frequency.setValueAtTime(200 * mul, st);
-      o.frequency.exponentialRampToValueAtTime(1320 * mul, target);
+      o.frequency.setValueAtTime(ex(200 * mul, 1320 * mul * pitch), st);
+      o.frequency.exponentialRampToValueAtTime(1320 * mul * pitch, target);
       o.frequency.exponentialRampToValueAtTime(190 * mul, end);
       lfoG.connect(o.detune);
-      g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(v * 0.2, st + 0.06);
+      if (r > 0) { g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(ex(v * 0.2, v), st + 0.015); }   // とちゅうからはプツッとならないよう少しだけフェード
+      else { g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(v * 0.2, st + 0.06); }
       g.gain.exponentialRampToValueAtTime(v, target);
       g.gain.exponentialRampToValueAtTime(v * 0.12, target + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, end);
       o.connect(g); g.connect(lp); o.start(st); o.stop(end + 0.05); out.push({ osc: o, g });
     });
     // はなす瞬間の「キン!」
-    out.push(tone({ f: 2093, at: target, dur: 0.25, type: 'triangle', vol: 0.5 }), tone({ f: 3136, at: target, dur: 0.16, type: 'sine', vol: 0.18 }));
+    out.push(tone({ f: 2093 * pitch, at: target, dur: 0.25, type: 'triangle', vol: 0.5 }), tone({ f: 3136 * pitch, at: target, dur: 0.16, type: 'sine', vol: 0.18 }));
     return out;
   },
   beat(n, at) {
@@ -415,6 +421,19 @@ const SFX = {
   },
   // スピードアップの合図(速く上がる「タタタタン!」)
   speedup() { if (!ac) return; const t = ac.currentTime + 0.05; [784, 988, 1175, 1568].forEach((f, k) => { tone({ f, at: t + k * 0.06, dur: k < 3 ? 0.07 : 0.25, type: 'square', vol: 0.18 }); }); noiseHit(t + 0.18, 0.12, 6000, 0.35); },
+  // ゆれ幅チェンジの知らせ(ゆらゆら揺れる音)
+  wobble() { if (!ac) return; const t = ac.currentTime + 0.16; const o = ac.createOscillator(), g = ac.createGain(), l = ac.createOscillator(), lg = ac.createGain();
+    o.type = 'triangle'; o.frequency.value = 880; l.frequency.value = 7; lg.gain.value = 120; l.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.65); l.start(t); l.stop(t + 0.65); },
+  // 強風「ビュオーッ」(from〜to は秒。合図の「キン!」にかからない時間に鳴らす)
+  wind(from, to, dir) { if (!ac) return []; const t0 = Math.max(ac.currentTime, from), len = Math.max(0.12, to - t0);
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(350, t0); bp.frequency.exponentialRampToValueAtTime(1400, t0 + len * 0.6); bp.frequency.exponentialRampToValueAtTime(500, t0 + len);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(1.3, t0 + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    s.connect(bp); bp.connect(g); let out = g;
+    if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.setValueAtTime(-0.8 * dir, t0); p.pan.linearRampToValueAtTime(0.8 * dir, t0 + len); g.connect(p); out = p; }
+    out.connect(master); s.start(t0); s.stop(t0 + len + 0.05); return [{ osc: s, g }]; },
   pi() { if (!ac) return; tone({ f: 1568, at: ac.currentTime + 0.16, dur: 0.14, type: 'square', vol: 0.38 }); tone({ f: 3136, at: ac.currentTime + 0.16, dur: 0.1, type: 'sine', vol: 0.15 }); },
   // 鳥の鳴き声。小鳥のさえずりのように、高い音が速くふるえながら上下する「ピチュピチュ」「チュリリ」
   // (合図の「キン!」はふるえない一定の音なので、聞き分けられる)
@@ -672,10 +691,26 @@ window.addEventListener('resize', () => { if (current === 'game') resize(); });
 const gnow = () => performance.now() - (G ? G.pausedTotal : 0);   // ゲームの時計(一時停止した分はとまる)
 const realOf = gms => gms + G.pausedTotal;
 const periodMs = () => G.period * 1000;
-function heldTheta(t) { return t < G.t0 ? -W.A : -W.A * Math.cos(2 * Math.PI * (t - G.t0) / periodMs()); }
-function heldSpeed(t) { return t < G.t0 ? 0 : Math.abs(W.A * Math.sin(2 * Math.PI * (t - G.t0) / periodMs()) * 2 * Math.PI / G.period); }
+function heldTheta(t) {
+  if (t < G.t0) return G.prev && t >= G.prev.t0 ? -G.amp * Math.cos(2 * Math.PI * (t - G.prev.t0) / (G.prev.period * 1000)) : -G.amp;
+  return -G.amp * Math.cos(2 * Math.PI * (t - G.t0) / periodMs());
+}
+function heldSpeed(t) {
+  if (t < G.t0) return G.prev && t >= G.prev.t0 ? Math.abs(G.amp * Math.sin(2 * Math.PI * (t - G.prev.t0) / (G.prev.period * 1000)) * 2 * Math.PI / G.prev.period) : 0;
+  return Math.abs(G.amp * Math.sin(2 * Math.PI * (t - G.t0) / periodMs()) * 2 * Math.PI / G.period);
+}
+// ゆれをはじめからやり直す(つかんだとき・一時停止から再開したとき・れんしゅうで落ちたあと)
+function restartSwing(t0) {
+  G.t0 = t0; G.prev = null; G.lit.clear(); G.sched.clear();
+  G.wind = null;   // 一時停止などでやり直したら、強風は取り消す(知らせなしで速さが変わらないように)
+}
 function handsOf(i, th) { return { x: trapX(i) + W.rope * Math.sin(th), y: W.pivotY + W.rope * Math.cos(th) }; }
-function targetsList() { const out = []; for (let k = 0; k < MAX_CYCLES; k++) out.push(G.t0 + periodMs() * (TARGET_PHASE + k)); return out; }
+function targetsList() {
+  const out = [];
+  if (G.prev) out.push(G.prev.t0 + G.prev.period * 1000 * TARGET_PHASE);   // 強風で速さが変わる直前のゆれの「キン!」
+  for (let k = 0; k < MAX_CYCLES; k++) out.push(G.t0 + periodMs() * (TARGET_PHASE + k));
+  return out;
+}
 function trap(i) { if (!G.traps.has(i)) G.traps.set(i, { th: 0.32 * Math.sin(i * 1.7 + 0.5), w: 0 }); return G.traps.get(i); }
 
 function newGame(practice) {
@@ -689,6 +724,7 @@ function newGame(practice) {
     lives: practice ? Infinity : 1, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0,   // 本番は1回ミスしたらおしまい
     startAt: now, pausedTotal: 0, pausedAt: 0, paused: false,
     traps: new Map(), sched: new Map(), lit: new Set(), fly: null, net: null, pop: null, cam: 0, lastT: now,
+    amp: W.A, pitch: 1, prev: null, wind: null, epoch: 0, windFx: null,
     pose: { x: 0, y: 0, ang: -W.A, mode: 'hang' }, lastErr: null, hint: practice ? 2 : 1, over: false,
     slowLeft: 0, banner: null, bird: null, birdNodes: [],
   };
@@ -705,9 +741,9 @@ function scheduleBeats() {
   if (!ac || G.state !== 'swing' || G.paused) return;
   const now = gnow();
   for (let k = 0; k < MAX_CYCLES; k++) {
-    const st = G.t0 + periodMs() * k, tt = st + periodMs() * TARGET_PHASE, en = st + periodMs(), key = 'c' + k;
+    const st = G.t0 + periodMs() * k, tt = st + periodMs() * TARGET_PHASE, en = st + periodMs(), key = 'c' + G.epoch + '_' + k;
     if (G.sched.has(key) || st - now > 300 || tt < now + 40) continue;
-    G.sched.set(key, SFX.cycle(aTime(realOf(st)), aTime(realOf(tt)), aTime(realOf(en))));
+    G.sched.set(key, SFX.cycle(aTime(realOf(st)), aTime(realOf(tt)), aTime(realOf(en)), G.pitch));
   }
 }
 function cancelBeats() {
@@ -728,7 +764,34 @@ const BIRD_SONGS = [
   [[0, 0.12, 2600, 4400, 5000], [0.16, 0.06, 4800, 3600, 4300]],                                   // ヒーッ・チュッ
 ];
 const BIRD_SONG_LEN = 0.3;   // いちばん長い鳴き声の長さ(秒)        // 15回つかまったあと(75m)から、ときどき鳥が来る
+const WOBBLE_SCORE = 300000;   // ゆれ幅チェンジ
+const WIND_SCORE = 500000;     // 強風
+// 強風:同じブランコのゆれの途中(いちばん後ろに来たとき)で、速さが変わる
+// 強風:前のブランコから飛んでいるあいだに「ビュオーッ」と知らせて、
+// つかんだあと、音が上がっていくとちゅう(ゆれの 0.2)で速さが変わる。ゆれの位置はつながったまま、そこから新しい速さになる
+const WIND_AT = 0.2;
+function windSound(fromMs, toMs, dir) { cancelWind(); G.windNodes = SFX.wind(aTime(realOf(fromMs)), aTime(realOf(toMs)), dir) || []; }
+function updateWind(now) {
+  const tc = G.t0 + periodMs() * WIND_AT;
+  if (now < tc) return;
+  const phase = (now - G.t0) / periodMs();                 // 今のゆれの位置(0〜1)
+  let np = Math.max(0.62, Math.min(1.8, G.period * G.wind.factor));
+  if (Math.abs(np / G.period - 1) < 0.12) np = Math.min(1.8, G.period * (G.wind.factor < 1 ? 1.35 : 0.78));   // もう速くできない(遅くできない)ときは逆にする
+  G.period = np;
+  G.t0 = now - phase * periodMs();                         // 同じ位置のまま、新しい速さに
+  cancelBeats(); G.epoch++; G.lit.clear();                 // 合図の音を、新しい速さで続きから鳴らし直す
+  G.windFx = { t: now, dir: G.wind.dir };
+  G.wind = null;
+}
 function onGrabEvents(now) {
+  // 30万点:ゆれ幅チェンジのお知らせ(最初の1回)
+  if (!G.wobbleOn && G.score >= WOBBLE_SCORE) {
+    G.wobbleOn = true; SFX.wobble(); vibrate([40, 40, 40]); say('ゆれ幅チェンジ'); G.banner = { text: 'ゆれ幅チェンジ!', t: now };
+  }
+  // 50万点:強風のお知らせ(最初の1回)と、ときどき強風
+  if (!G.windOn && G.score >= WIND_SCORE) {
+    G.windOn = true; say('強風注意'); G.banner = { text: '強風注意!', t: now };
+  }
   // 15万点をこえた瞬間に「スピードアップ!」を音・声・絵で知らせる
   if (!G.fastOn && G.score >= FAST_SCORE) {
     G.fastOn = true; G.noSlow = 3; SFX.speedup(); vibrate([30, 30, 30, 30, 60]); say('スピードアップ');
@@ -769,6 +832,10 @@ function updateBird(now) {
     G.birdNodes.push(...SFX.chirp(aTime(realOf(c.t)), pan));
   });
 }
+function cancelWind() {
+  if (ac && G.windNodes) { const t = ac.currentTime; G.windNodes.forEach(n => { try { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(0.0001, t); n.osc.stop(t + 0.02); } catch (e) {} }); }
+  G.windNodes = [];
+}
 function cancelBird() {
   if (ac) { const t = ac.currentTime; G.birdNodes.forEach(n => { if (!n) return; try { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(0.0001, t); n.osc.stop(t + 0.02); } catch (e) {} }); }
   G.birdNodes = [];
@@ -779,22 +846,32 @@ function cancelBird() {
 function release() {
   if (!G || G.paused || G.state !== 'swing' || G.over) return;
   const now = gnow();
-  if (now < G.t0 - 150) return;               // まだゆれ始めていない
+  if (now < (G.prev ? G.prev.t0 : G.t0) - 150) return;   // まだゆれ始めていない(強風で速さが変わる直前は、前のゆれの始まりで見る)
   const t = now - settings.offset;
   let tgt = targetsList().reduce((a, b) => Math.abs(t - b) < Math.abs(t - a) ? b : a);
   const err = t - tgt, ae = Math.abs(err);
   const kind = ae <= WIN.crit ? 'crit' : ae <= WIN.nice ? 'nice' : ae <= WIN.safe ? 'safe' : 'miss';
   cancelBeats();
   const th = heldTheta(now), from = handsOf(G.i, th);
-  const tr = trap(G.i); tr.th = th; tr.w = (now < G.t0 ? 0 : W.A * Math.sin(2 * Math.PI * (now - G.t0) / periodMs()) * 2 * Math.PI / G.period);
+  const tr = trap(G.i); tr.th = th; tr.w = (now < G.t0 ? 0 : G.amp * Math.sin(2 * Math.PI * (now - G.t0) / periodMs()) * 2 * Math.PI / G.period);
+  G.wind = null; G.prev = null;   // 位置を計算したあとで、強風の状態を消す
   G.lastErr = err;
   judge(kind, err);
   if (kind === 'miss') startFall(from, th, err < 0 ? 'early' : 'late');
   else {
     const j = G.i + (kind === 'crit' ? 2 : 1);
-    const to = handsOf(j, -W.A);
+    // 30万点から、つぎのブランコのゆれ幅がバラバラになる
+    const amp = G.score >= WOBBLE_SCORE ? 0.62 + Math.random() * 0.5 : W.A;
+    const to = handsOf(j, -amp);
     G.state = 'fly';
-    G.fly = { start: now, dur: kind === 'crit' ? 1150 : 780, from, to, h: kind === 'crit' ? 105 : 60, j, kind, th0: th, jth: trap(j).th };
+    G.fly = { start: now, dur: kind === 'crit' ? 1150 : 780, from, to, h: kind === 'crit' ? 105 : 60, j, kind, th0: th, jth: trap(j).th, amp };
+    // 50万点から、ときどき強風(飛んでいるあいだに知らせる)
+    if (G.score >= WIND_SCORE && Math.random() < 0.35) {
+      const wd = { factor: Math.random() < 0.5 ? 0.78 : 1.35, dir: Math.random() < 0.5 ? 1 : -1 };
+      G.fly.wind = wd;
+      windSound(now + 150, now + G.fly.dur + 100, wd.dir);   // つかんだ直後まで鳴る(速さが変わるのはそのあと)
+      vibrate([80, 40, 80]); G.windFx = { t: now, dir: wd.dir }; G.banner = { text: '強風!', t: now };   // 速くなるか遅くなるかは、変わる瞬間までわからない
+    }
   }
 }
 function judge(kind, err) {
@@ -829,29 +906,32 @@ function update(now, dt) {
   });
   const P = G.pose;
   if (G.state === 'swing') {
+    if (G.wind) updateWind(now);
     const th = heldTheta(now), h = handsOf(G.i, th);
     trap(G.i).th = th;
     P.x = h.x; P.y = h.y; P.ang = th; P.mode = 'hang';
-    swingUpdate(heldSpeed(now), th / W.A * 0.8);
+    swingUpdate(heldSpeed(now), th / G.amp * 0.8);
     scheduleBeats();
     // 光と振動(絵の合図)
     targetsList().forEach((tt, k) => { for (let n = 0; n < 4; n++) { const bt = tt - (3 - n) * gapMs(), key = k * 4 + n; if (now >= bt && now < bt + 120 && !G.lit.has(key) && bt >= G.t0 - 400) { G.lit.add(key); vibrate(n < 3 ? 25 : 70); } } });
-    const last = targetsList()[MAX_CYCLES - 1];
+    const tl = targetsList(), last = tl[tl.length - 1];
     if (now > last + 450) { cancelBeats(); const th2 = heldTheta(now); startFall(handsOf(G.i, th2), th2, 'slip'); }
   } else if (G.state === 'fly') {
     const F = G.fly, s = Math.min(1, (now - F.start) / F.dur), e = s * s * (3 - 2 * s);
     // つかむブランコが迎えに来る
-    const jt = trap(F.j); jt.th = F.jth + (-W.A - F.jth) * Math.min(1, s * 1.15); jt.w = 0;
+    const jt = trap(F.j); jt.th = F.jth + (-F.amp - F.jth) * Math.min(1, s * 1.15); jt.w = 0;
     P.x = F.from.x + (F.to.x - F.from.x) * s;
     P.y = F.from.y + (F.to.y - F.from.y) * e - 4 * F.h * s * (1 - s);
     const spin = (F.kind === 'crit' && !settings.calm) ? -2 * Math.PI * e : 0;
-    P.ang = F.th0 + (-W.A - F.th0) * e + spin; P.mode = F.kind === 'crit' ? 'tuck' : 'reach';
+    P.ang = F.th0 + (-F.amp - F.th0) * e + spin; P.mode = F.kind === 'crit' ? 'tuck' : 'reach';
     swingUpdate(2.2 * (1 - Math.abs(s - 0.5) * 1.4), 0);
     if (s >= 1) {
-      G.i = F.j; G.catches++; G.state = 'swing'; G.fly = null;
+      G.i = F.j; G.catches++; G.state = 'swing'; G.amp = F.amp; G.fly = null;
+      G.pitch = G.score >= WOBBLE_SCORE ? 0.7 + Math.random() * 0.65 : 1;   // 30万点から、合図の高さもブランコごとに変わる
       G.period = nextPeriod(G.catches, G.score);
       onGrabEvents(now);
-      G.t0 = now; G.lit.clear(); G.sched.clear();
+      restartSwing(now);
+      G.wind = F.wind || null;   // restartSwing のあとに入れる(restartSwing は強風を取り消すので)
       SFX.grab(); updateHud();
     }
   } else if (G.state === 'fall') {
@@ -868,7 +948,7 @@ function update(now, dt) {
     if (s >= 1) {
       if (G.lives <= 0) return gameOver();
       // 同じブランコからやり直し
-      G.state = 'swing'; G.t0 = now + 1300; G.lit.clear(); G.sched.clear(); G.net = null;
+      G.state = 'swing'; restartSwing(now + 1300); G.net = null;
       say('もう一回');
     }
   }
@@ -971,7 +1051,7 @@ function draw(now) {
   }
   // はなす位置のガイド(ゴースト)
   if (G.state === 'swing' && settings.guide) {
-    const gth = -W.A * Math.cos(2 * Math.PI * TARGET_PHASE), gp = handsOf(G.i, gth);
+    const gth = -G.amp * Math.cos(2 * Math.PI * TARGET_PHASE), gp = handsOf(G.i, gth);
     ctx.setLineDash([6, 6]); ctx.strokeStyle = C.guide; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(gp.x, gp.y, 18, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = C.guide; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ここ', gp.x, gp.y + 38);
@@ -993,8 +1073,9 @@ function draw(now) {
   ctx.restore();
 
   if (G.slowLeft > 0) drawSlow(now);
+  drawWind(now);
   drawLamps(now, nt); if (G.bar) drawBar(now, nt); drawBird(now); drawBanner(now); drawPop(now);
-  if (G.state === 'swing' && now < G.t0) bigText(G.catches === 0 && !G.lastMiss ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
+  if (G.state === 'swing' && now < G.t0 && !G.prev) bigText(G.catches === 0 && !G.lastMiss ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
   if (G.hint && G.state === 'swing' && G.catches === 0) {
     ctx.fillStyle = C.hint; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
     if (w < 480) { ctx.fillText('音がいちばん高い「キン!」', w / 2, 142); ctx.fillText('「今」が光ったら はなす', w / 2, 164); }   // せまい画面は2行に
@@ -1027,11 +1108,24 @@ function drawBird(now) {
   ctx.fillStyle = C.hc ? C.textStroke : '#E69F00'; ctx.beginPath(); ctx.moveTo(24, -7); ctx.lineTo(34, -4); ctx.lineTo(24, -2); ctx.fill();   // くちばし
   ctx.restore();
 }
+// 強風:画面を横切る風の線
+function drawWind(now) {
+  const f = G.windFx; if (!f) return; const a = (now - f.t) / 1100; if (a > 1) { G.windFx = null; return; }
+  const { w, h } = view; ctx.save(); ctx.globalAlpha = Math.sin(Math.PI * a) * 0.9;
+  ctx.strokeStyle = C.hc ? C.text : '#cfe8ff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let k = 0; k < 9; k++) {
+    const y = h * (0.15 + 0.08 * k), len = 120 + (k % 3) * 60, x0 = ((a * 1.6 + k * 0.37) % 1.4 - 0.2) * w;
+    const x = f.dir > 0 ? x0 : w - x0;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - f.dir * len / 2, y - 10, x - f.dir * len, y + 4); ctx.stroke();
+  }
+  ctx.restore();
+}
 // スローの始まり・終わりのお知らせ
 function drawBanner(now) {
   if (!G.banner) return; const a = (now - G.banner.t) / 1200; if (a > 1) { G.banner = null; return; }
   ctx.save(); ctx.globalAlpha = a > 0.75 ? (1 - a) / 0.25 : 1;
-  bigText(G.banner.text === 'スロー' ? '◷ スロー' : G.banner.text === 'スピードアップ!' ? '▶▶ スピードアップ!' : '▶ ' + G.banner.text, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
+  const bt = G.banner.text;
+  bigText(bt === 'スロー' ? '◷ スロー' : bt === 'スピードアップ!' ? '▶▶ スピードアップ!' : bt === 'ゆれ幅チェンジ!' ? '〰 ゆれ幅チェンジ!' : bt.startsWith('強風') ? '≋ ' + bt : '▶ ' + bt, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
   ctx.restore();
 }
 function nextTarget(now) {
@@ -1164,14 +1258,15 @@ function sayStatus() {
 /* ---------- 一時停止 ---------- */
 function pause() {
   if (!G || G.paused || G.over) return;
-  G.paused = true; G.pausedAt = performance.now(); cancelBeats(); cancelBird(); swingUpdate(0, 0);
+  G.paused = true; G.pausedAt = performance.now(); cancelBeats(); cancelBird(); cancelWind(); swingUpdate(0, 0);
   $('overlay').classList.remove('hidden'); $('resumeBtn').focus();
 }
 function resume() {
   if (!G || !G.paused) return;
   G.pausedTotal += performance.now() - G.pausedAt; G.paused = false;
   // ゆれの途中から再開すると合図が聞き取れないので、そのブランコの最初からやり直す
-  if (G.state === 'swing') { G.t0 = gnow() + 1300; G.lit.clear(); G.sched.clear(); }
+  if (G.state === 'swing') restartSwing(gnow() + 1300);
+  else if (G.state === 'fly' && G.fly.wind) windSound(gnow(), G.fly.start + G.fly.dur + 100, G.fly.wind.dir);
   G.lastT = gnow();
   $('overlay').classList.add('hidden'); $('stage').focus();
 }
@@ -1181,14 +1276,14 @@ $('resumeBtn').addEventListener('click', resume);
 $('quitBtn').addEventListener('click', () => { endGame(); show('title'); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
-function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); cancelBird(); } swingStop(); G = null; }
+function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); cancelBird(); cancelWind(); } swingStop(); G = null; }
 
 /* =========================================================
    けっか・ランキング送信
    ========================================================= */
 let lastPractice = false;
 function gameOver() {
-  G.over = true; cancelBeats(); cancelBird(); swingStop(); SFX.over();
+  G.over = true; cancelBeats(); cancelBird(); cancelWind(); swingStop(); SFX.over();
   const res = { bar: G.bar && !G.practice, lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
   setTimeout(() => { endGame(); showResult(res); }, 600);   // 一発勝負なので、すぐ結果へ(「もう一回」を押しやすく)
 }
