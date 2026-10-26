@@ -101,6 +101,8 @@ ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:norm
 .stats b{display:block;font-size:22px;color:var(--ink)}
 #resultMsg{text-align:center;font-size:16px;min-height:1.7em}
 h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移すフォーカスの枠は出さない */
+.btn.hidden{display:none}
+.vo-note{margin-top:4px;padding-top:10px;border-top:1px solid var(--line);color:var(--ink)}
 .taunt{font-size:22px;font-weight:bold;text-align:center;line-height:1.5;color:var(--ink)}
 .next-goal{text-align:center;font-size:16px;color:var(--crit);font-weight:bold;min-height:1.5em}
 /* Windowsのハイコントラスト:色がシステムの色に置きかわるので、色以外(枠の太さ・記号)でも区別できるように */
@@ -131,7 +133,8 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <button class="btn ghost" id="toHowto">あそびかた</button>
     </div>
     <button class="btn ghost" id="toSettings">せってい</button>
-    <p class="note">音と絵の両方で「はなすタイミング」がわかります。<br>スペースキー・Enter・画面タップで手をはなします。<br>スマホは横向きがおすすめ。</p>
+    <p class="note">音と絵の両方で「はなすタイミング」がわかります。<br>スペースキー・Enter・画面タップで手をはなします。<br>スマホは縦向きがおすすめ。</p>
+    <p class="note vo-note">VoiceOverをお使いの方は、「はじめる」を押してからVoiceOverをお切りください。</p>
   </div>
 </section>
 
@@ -139,13 +142,14 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
 <section id="login" class="screen hidden" aria-labelledby="loginH">
   <form class="card" id="loginForm" autocomplete="on">
     <h2 id="loginH">ログイン</h2>
+    <p id="loginFor" class="next-goal"></p>
     <p class="note">はじめての名前なら、そのまま登録されます。<br>同じ名前とパスワードで、どの端末からでもランキングに参加できます。</p>
     <label class="field">ニックネーム(12文字まで)<input type="text" id="nameIn" maxlength="12" autocomplete="username" required></label>
     <label class="field">パスワード(4文字以上)<input type="password" id="passIn" minlength="4" autocomplete="current-password" required></label>
     <p id="loginMsg" class="note" role="alert"></p>
     <button class="btn" type="submit" id="loginBtn">ログイン / 登録</button>
     <button class="btn ghost" type="button" id="guestBtn">ゲストで遊ぶ</button>
-    <button class="btn ghost" type="button" data-back>もどる</button>
+    <button class="btn ghost" type="button" id="loginBack" data-back>もどる</button>
   </form>
 </section>
 
@@ -158,6 +162,8 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <li><b>音</b>:ゆれに合わせて「キュイーン」と音がだんだん高くなります。<b>いちばん高くなって「キン!」と鳴った瞬間</b>に手をはなします。そのあと音は下がって、次のゆれでまた上がります(ブランコ1往復で音も1周)。</li>
       <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
+      <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
+      <li><b>鳥</b>:75mをこえると、ときどき鳥が飛んできて「チュイッ」と鳴いたり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
     </ol></div>
     <div class="panel judges" aria-label="判定の種類">
@@ -181,7 +187,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
     <h2 id="setH">せってい</h2>
     <div class="panel">
       <label class="set">音量<input type="range" id="sVol" min="0" max="100" step="5"><span class="val" id="vVol"></span></label>
-      <label class="set">ゲーム中の声(判定を読み上げ)<input type="checkbox" id="sVoice"></label>
+      <label class="set">ゲーム中の声(判定と結果を読み上げ)<input type="checkbox" id="sVoice"></label>
       <label class="set">合図で振動(スマホ)<input type="checkbox" id="sVib"></label>
       <label class="set">はなす位置のガイドを表示<input type="checkbox" id="sGuide"></label>
       <label class="set"><span>下のタイミングバーを表示<br><small class="note">オンにすると点数 ×0.8(れんしゅうは そのまま)</small></span><input type="checkbox" id="sBar"></label>
@@ -246,6 +252,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <div>じぶんのベスト<b id="rBest">0</b></div>
     </div>
     <p id="resultMsg" role="status"></p>
+    <button class="btn ghost hidden" id="registerBtn">このスコアでランキングに参加する(登録・ログイン)</button>
     <button class="btn" id="againBtn">もう一回</button>
     <div class="row">
       <button class="btn ghost" id="resRanking">ランキング</button>
@@ -356,6 +363,11 @@ const SFX = {
   safe() { tone({ f: 587, dur: 0.2, type: 'triangle', vol: 0.35 }); },
   miss() { tone({ f: 440, to: 98, dur: 0.7, type: 'sawtooth', vol: 0.22 }); },
   grab() { if (!ac) return; noiseHit(ac.currentTime, 0.08, 2500, 0.5); tone({ f: 330, dur: 0.08, type: 'square', vol: 0.12 }); },
+  // スローの始まり「カチッ」(時計の針の音)と、終わりの「ピッ」
+  kachi() { if (!ac) return; const t = ac.currentTime + 0.09; noiseHit(t, 0.03, 4200, 0.9); tone({ f: 1900, at: t, dur: 0.03, type: 'square', vol: 0.22 }); tone({ f: 950, at: t + 0.012, dur: 0.05, type: 'square', vol: 0.12 }); },
+  pi() { if (!ac) return; tone({ f: 1568, at: ac.currentTime + 0.09, dur: 0.1, type: 'square', vol: 0.2 }); },
+  // 鳥の鳴き声(「キン!」とまぎらわしくならないように、短くて上がる「チュイッ」)
+  chirp(at, pan) { const out = []; [[2600, 3900, 0], [3000, 4300, 0.075]].forEach(([f, to, d]) => out.push(tone({ f, to, at: at + d, dur: 0.06, type: 'triangle', vol: 0.16, pan }))); return out; },
   net() { tone({ f: 160, to: 320, dur: 0.25, type: 'sine', vol: 0.45 }); },
   slip() { tone({ f: 520, to: 260, dur: 0.35, type: 'square', vol: 0.15 }); },
   start() { if (!ac) return; const t = ac.currentTime; [523, 659, 784].forEach((f, k) => tone({ f, at: t + k * 0.09, dur: 0.18, type: 'triangle', vol: 0.3 })); },
@@ -426,6 +438,19 @@ const errText = e => ERR[e] || ('通信できませんでした(' + e + ')');
 // 送れなかったスコアは取っておいて、つながった時に送り直す
 let flushing = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// スコアの送信は1つずつ順番に、前の送信から5.5秒あけて送る
+// (サーバーは同じ人の5秒以内の連続送信を断る。一発勝負だと1ゲームが5秒かからないことがある)
+let scoreQueue = Promise.resolve(), lastScoreAt = 0;
+function postScore(data) {
+  const p = scoreQueue.then(async () => {
+    const wait = lastScoreAt + 5500 - Date.now();
+    if (wait > 0) await sleep(wait);
+    try { return await apiPost(Object.assign({ action: 'score', name: account.name, token: account.token }, data)); }
+    finally { lastScoreAt = Date.now(); }
+  });
+  scoreQueue = p.catch(() => {});
+  return p;
+}
 function addPending(data) { store.set('pending', store.get('pending', []).concat([{ name: account.name, data }]).slice(-20)); }
 function flushPending() {
   if (!flushing) flushing = doFlush().finally(() => { flushing = null; });
@@ -433,14 +458,12 @@ function flushPending() {
 }
 async function doFlush() {
   if (!CONFIG.SERVER_URL || !account) return;
-  let sent = 0;
   while (account) {
     const list = store.get('pending', []);
     const idx = list.findIndex(p => p.name === account.name);
     if (idx < 0) return;
-    if (sent++) await sleep(5500);          // サーバーは同じ人の連続送信を5秒断るので、あけてから送る
     let r;
-    try { r = await apiPost(Object.assign({ action: 'score', name: account.name, token: account.token }, list[idx].data)); }
+    try { r = await postScore(list[idx].data); }
     catch (e) { return; }                    // つながらない → 次の機会に
     if (!r.ok && ['busy', 'too_fast', 'server'].includes(r.error)) return;   // 一時的なエラー → 残しておく
     if (!r.ok && r.error === 'bad_token') { account = null; store.del('account'); refreshAccount(); return; }   // ログインし直したら送る
@@ -450,8 +473,22 @@ async function doFlush() {
 }
 
 /* ---------- ログイン ---------- */
-$('toLogin').addEventListener('click', () => { $('loginMsg').textContent = CONFIG.SERVER_URL ? '' : 'いまはサーバーが設定されていないので、ゲストのみで遊べます(ランキングはこの端末だけ)'; show('login', 'title'); });
-$('guestBtn').addEventListener('click', () => { account = null; store.del('account'); refreshAccount(); show('title'); announce('ゲストで遊びます'); });
+// ゲストで遊んだスコアを、あとから登録してランキングに送るためのもの(つぎのゲームを始めたら消える)
+let guestScore = null;
+function openLogin(from) {
+  $('loginMsg').textContent = CONFIG.SERVER_URL ? '' : 'いまはサーバーが設定されていないので、ゲストのみで遊べます(ランキングはこの端末だけ)';
+  $('loginFor').textContent = guestScore && from === 'result'
+    ? 'ニックネームとパスワードを決めると、さっきのスコア(' + guestScore.data.score.toLocaleString() + '点・' + guestScore.data.dist + 'm)がランキングに入ります。前に登録した人は、同じ名前とパスワードでログインしてください。' : '';
+  $('guestBtn').textContent = from === 'result' ? '登録しないでもどる' : 'ゲストで遊ぶ';
+  $('loginBack').classList.toggle('hidden', from === 'result');   // 結果画面から来たときは「登録しないでもどる」だけにする
+  show('login', from);
+}
+$('toLogin').addEventListener('click', () => openLogin('title'));
+$('registerBtn').addEventListener('click', () => openLogin('result'));
+$('guestBtn').addEventListener('click', () => {
+  if (backTo === 'result') { show('result'); return; }   // 結果画面から来たときは、そのままもどる
+  account = null; store.del('account'); refreshAccount(); show('title'); announce('ゲストで遊びます');
+});
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const name = $('nameIn').value.trim(), pass = $('passIn').value;
@@ -463,7 +500,15 @@ $('loginForm').addEventListener('submit', async e => {
     const r = await apiPost({ action: 'auth', name, pass });
     if (r.ok) {
       account = { name: r.name, token: r.token }; store.set('account', account); refreshAccount();
-      $('passIn').value = ''; show('title'); announce((r.created ? '登録しました。' : 'おかえりなさい。') + r.name + 'さん');
+      $('passIn').value = '';
+      const hello = (r.created ? '登録しました。' : 'おかえりなさい。') + r.name + 'さん';
+      if (guestScore && backTo === 'result') {
+        // ゲストで出したスコアを、そのまま送る
+        const g = guestScore; guestScore = null;
+        $('registerBtn').classList.add('hidden');
+        show('result'); announce(hello + '。さっきのスコアを送ります');
+        sendScore(g.data, g.note);
+      } else { show('title'); announce(hello); }
       flushPending();
     } else $('loginMsg').textContent = errText(r.error);
   } catch (err) { $('loginMsg').textContent = '通信できませんでした(' + err.message + ')'; }
@@ -543,8 +588,10 @@ function resize() {
   const r = $('stage').getBoundingClientRect();
   cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
   // 高さ540と、横にブランコ2つ半(つぎ・クリティカルの先)が入るように縮める。縦長の画面では上下の真ん中に置く
-  const sc = Math.min(r.height / W.H, r.width / 700);
-  view = { w: r.width, h: r.height, dpr, s: sc, oy: Math.max(0, (r.height - W.H * sc) / 2) };
+  // 縦画面は横幅がせまいので、ブランコ2本分(今と、つぎ)が入るくらいまで大きくする
+  const portrait = r.height > r.width;
+  const sc = Math.min(r.height / W.H, r.width / (portrait ? 520 : 700));
+  view = { w: r.width, h: r.height, dpr, s: sc, oy: Math.max(0, (r.height - W.H * sc) / 2), portrait };
 }
 window.addEventListener('resize', () => { if (current === 'game') resize(); });
 
@@ -558,6 +605,7 @@ function targetsList() { const out = []; for (let k = 0; k < MAX_CYCLES; k++) ou
 function trap(i) { if (!G.traps.has(i)) G.traps.set(i, { th: 0.32 * Math.sin(i * 1.7 + 0.5), w: 0 }); return G.traps.get(i); }
 
 function newGame(practice) {
+  guestScore = null;   // 前のゲストのスコアは、つぎのゲームを始めたら登録できなくする
   audioInit();
   show('game');
   resize();
@@ -568,6 +616,7 @@ function newGame(practice) {
     startAt: now, pausedTotal: 0, pausedAt: 0, paused: false,
     traps: new Map(), sched: new Map(), lit: new Set(), fly: null, net: null, pop: null, cam: 0, lastT: now,
     pose: { x: 0, y: 0, ang: -W.A, mode: 'hang' }, lastErr: null, hint: practice ? 2 : 1, over: false,
+    slowLeft: 0, banner: null, bird: null, birdNodes: [],
   };
   G.cam = trapX(0) - 200;
   updateHud();
@@ -592,6 +641,51 @@ function cancelBeats() {
   const t = ac.currentTime;
   G.sched.forEach(list => list.forEach(n => { if (!n) return; try { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(0.0001, t); n.osc.stop(t + 0.02); } catch (e) {} }));
   G.sched.clear();
+}
+
+/* ---------- スローと鳥 ---------- */
+const SLOW_SCORE = 100000;   // この点数をこえると、ときどきスローになる
+const SLOW_MUL = 1.6;        // スローのときのゆれの遅さ(1往復の時間が1.6倍)
+const BIRD_FROM = 15;        // 15回つかまったあと(75m)から、ときどき鳥が来る
+function onGrabEvents(now) {
+  // スロー:「カチッ」のあと遅くなり、何回かつかまると「ピッ」で元にもどる
+  if (G.slowLeft > 0) {
+    G.slowLeft--;
+    if (G.slowLeft > 0) G.period = Math.min(2.6, G.period * SLOW_MUL);
+    else { SFX.pi(); vibrate(40); G.banner = { text: 'もとの速さ', t: now }; }
+  } else if (G.score >= SLOW_SCORE && Math.random() < 0.12) {   // スローはたまに(出すぎると、ほとんどスローになってしまう)
+    G.slowLeft = 2 + Math.floor(Math.random() * 3);   // 2〜4本のブランコのあいだ
+    G.period = Math.min(2.6, G.period * SLOW_MUL);
+    SFX.kachi(); vibrate([20, 60, 20]); G.banner = { text: 'スロー', t: now };
+  }
+  // 鳥:画面の上を横切りながら鳴いて、ランプにもかぶる(音でも絵でもじゃまする)
+  if (!G.bird && G.catches >= BIRD_FROM && Math.random() < 0.25) spawnBird(now);
+}
+function spawnBird(now) {
+  const dur = 2600 + Math.random() * 1400, start = now + 300 + Math.random() * 900, dir = Math.random() < 0.5 ? 1 : -1;
+  const chirps = []; let t = start + 150 + Math.random() * 250;
+  while (t < start + dur - 150) { chirps.push({ t, done: false }); t += 260 + Math.random() * 380; }
+  G.bird = { start, dur, dir, y: 70 + Math.random() * 60, chirps };
+}
+function birdX(b, now) { const s = (now - b.start) / b.dur, w = view.w + 120; return b.dir > 0 ? -60 + w * s : view.w + 60 - w * s; }
+function updateBird(now) {
+  const b = G.bird; if (!b) return;
+  if (now > b.start + b.dur) { G.bird = null; return; }
+  if (!ac) return;
+  // 「キン!」のまわり(±90ms)では鳴かない。合図そのものは必ず聞こえるように
+  const tg = G.state === 'swing' ? targetsList() : [];
+  b.chirps.forEach(c => {
+    if (c.done || c.t - now > 250 || c.t < now) return;
+    c.done = true;
+    if (tg.some(x => Math.abs(x - c.t) < 90)) return;
+    const pan = Math.max(-0.9, Math.min(0.9, (birdX(b, c.t) / view.w) * 2 - 1));
+    G.birdNodes.push(...SFX.chirp(aTime(realOf(c.t)), pan));
+  });
+}
+function cancelBird() {
+  if (ac) { const t = ac.currentTime; G.birdNodes.forEach(n => { if (!n) return; try { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(0.0001, t); n.osc.stop(t + 0.02); } catch (e) {} }); }
+  G.birdNodes = [];
+  if (G.bird) G.bird.chirps.forEach(c => { if (c.t > gnow()) c.done = false; });   // 再開したら、まだの鳴き声はまた鳴らす
 }
 
 /* ---------- はなす ---------- */
@@ -669,6 +763,7 @@ function update(now, dt) {
     if (s >= 1) {
       G.i = F.j; G.catches++; G.state = 'swing'; G.fly = null;
       G.period = nextPeriod(G.catches);
+      onGrabEvents(now);
       G.t0 = now; G.lit.clear(); G.sched.clear();
       SFX.grab(); updateHud();
     }
@@ -690,9 +785,15 @@ function update(now, dt) {
       say('もう一回');
     }
   }
+  updateBird(now);
   // カメラ(棒人間が左から35%くらいの位置)
   const visW = view.w / view.s;
-  const target = P.x - visW * 0.35;
+  // 縦画面は横がせまいので、手ではなくブランコの支点を基準にして、カメラが左右にゆれないようにする
+  // (ゆれのいちばん後ろ・はなす位置の「ここ」・つぎのブランコが、全部画面に入る)
+  const target = !view.portrait ? P.x - visW * 0.35
+    : G.state === 'swing' ? trapX(G.i) - visW * 0.38
+    : G.state === 'fly' ? trapX(G.fly.j) - visW * 0.38
+    : P.x - visW * 0.5;
   G.cam += (target - G.cam) * Math.min(1, dt * (G.state === 'fly' ? 5 : 3));
 }
 
@@ -796,12 +897,47 @@ function draw(now) {
   drawStick(G.pose);
   ctx.restore();
 
-  drawLamps(now, nt); if (G.bar) drawBar(now, nt); drawPop(now);
+  if (G.slowLeft > 0) drawSlow(now);
+  drawLamps(now, nt); if (G.bar) drawBar(now, nt); drawBird(now); drawBanner(now); drawPop(now);
   if (G.state === 'swing' && now < G.t0) bigText(G.catches === 0 && !G.lastMiss ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
   if (G.hint && G.state === 'swing' && G.catches === 0) {
     ctx.fillStyle = C.hint; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('音がいちばん高い「キン!」・「今」が光ったら はなす', w / 2, 142);
+    if (w < 480) { ctx.fillText('音がいちばん高い「キン!」', w / 2, 142); ctx.fillText('「今」が光ったら はなす', w / 2, 164); }   // せまい画面は2行に
+    else ctx.fillText('音がいちばん高い「キン!」・「今」が光ったら はなす', w / 2, 142);
   }
+}
+// スロー中:画面のふちを青く、左上に時計マークと「スロー」
+function drawSlow(now) {
+  const { w, h } = view;
+  ctx.save();
+  if (!C.hc) { const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75); g.addColorStop(0, 'rgba(86,180,233,0)'); g.addColorStop(1, 'rgba(86,180,233,.28)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); }
+  else { ctx.strokeStyle = C.crit; ctx.lineWidth = 8; ctx.setLineDash([18, 10]); ctx.strokeRect(4, 4, w - 8, h - 8); ctx.setLineDash([]); }
+  const x = 34, y = 150;
+  ctx.strokeStyle = C.hc ? C.text : '#56B4E9'; ctx.fillStyle = C.hc ? C.text : '#56B4E9'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.stroke();
+  const a = (now / 1000) % 1 * Math.PI * 2 * (settings.calm ? 0 : 0.25);
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 9); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); ctx.stroke();
+  ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('スロー あと' + G.slowLeft, x + 22, y + 1);
+  ctx.textBaseline = 'alphabetic'; ctx.restore();
+}
+// 鳥(羽ばたきながら横切る。ランプの前を通る)
+function drawBird(now) {
+  const b = G.bird; if (!b || now < b.start) return;
+  const x = birdX(b, now), y = b.y + Math.sin(now / 180) * 8, f = Math.sin(now / 70) * (settings.calm ? 0.3 : 1);
+  ctx.save(); ctx.translate(x, y); ctx.scale(b.dir, 1);
+  ctx.fillStyle = C.hc ? C.text : '#1b1b1b'; ctx.strokeStyle = C.hc ? C.textStroke : '#f6f2e7'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();                 // からだ
+  ctx.beginPath(); ctx.moveTo(-6, -2); ctx.quadraticCurveTo(-14, -26 * f, -34, -18 * f - 6); ctx.lineTo(4, -4); ctx.fill(); ctx.stroke();   // はね
+  ctx.beginPath(); ctx.arc(18, -6, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();                          // あたま
+  ctx.fillStyle = C.hc ? C.textStroke : '#E69F00'; ctx.beginPath(); ctx.moveTo(24, -7); ctx.lineTo(34, -4); ctx.lineTo(24, -2); ctx.fill();   // くちばし
+  ctx.restore();
+}
+// スローの始まり・終わりのお知らせ
+function drawBanner(now) {
+  if (!G.banner) return; const a = (now - G.banner.t) / 1200; if (a > 1) { G.banner = null; return; }
+  ctx.save(); ctx.globalAlpha = a > 0.75 ? (1 - a) / 0.25 : 1;
+  bigText(G.banner.text === 'スロー' ? '◷ スロー' : '▶ ' + G.banner.text, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
+  ctx.restore();
 }
 function nextTarget(now) {
   for (const t of targetsList()) if (t > now - 150) return t;
@@ -933,7 +1069,7 @@ function sayStatus() {
 /* ---------- 一時停止 ---------- */
 function pause() {
   if (!G || G.paused || G.over) return;
-  G.paused = true; G.pausedAt = performance.now(); cancelBeats(); swingUpdate(0, 0);
+  G.paused = true; G.pausedAt = performance.now(); cancelBeats(); cancelBird(); swingUpdate(0, 0);
   $('overlay').classList.remove('hidden'); $('resumeBtn').focus();
 }
 function resume() {
@@ -950,14 +1086,14 @@ $('resumeBtn').addEventListener('click', resume);
 $('quitBtn').addEventListener('click', () => { endGame(); show('title'); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
-function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); } swingStop(); G = null; }
+function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); cancelBird(); } swingStop(); G = null; }
 
 /* =========================================================
    けっか・ランキング送信
    ========================================================= */
 let lastPractice = false;
 function gameOver() {
-  G.over = true; cancelBeats(); swingStop(); SFX.over();
+  G.over = true; cancelBeats(); cancelBird(); swingStop(); SFX.over();
   const res = { bar: G.bar && !G.practice, lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
   setTimeout(() => { endGame(); showResult(res); }, 600);   // 一発勝負なので、すぐ結果へ(「もう一回」を押しやすく)
 }
@@ -1002,6 +1138,7 @@ function tauntFor(dist, bestDist, isNewBest, lastMiss) {
 
 async function showResult(r) {
   lastPractice = r.practice;
+  guestScore = null; $('registerBtn').classList.add('hidden');
   $('rScore').textContent = r.score.toLocaleString(); $('rDist').textContent = r.dist + 'm'; $('rCrit').textContent = r.crit; $('rCombo').textContent = r.combo;
   const best = Math.max(store.get('best', 0), r.practice ? 0 : r.score); if (!r.practice) store.set('best', best);
   $('rBest').textContent = best.toLocaleString();
@@ -1015,19 +1152,32 @@ async function showResult(r) {
   const note = (text, live) => { $('resultMsg').textContent = text; $('resSr').textContent = '。' + head + text; if (live) announce(text); };
   $('resSr').textContent = '。' + head;
   show('result');
+  // ゲームの声(せっていの「ゲーム中の声」)でも煽り文句を読む。スクリーンリーダーを使っていない人にも聞こえるように
+  setTimeout(() => say(t.main + '。' + (t.sub ? t.sub + '。' : '') + r.dist + 'メートル、' + r.score + '点'), 350);
   if (r.practice) { note('れんしゅうなのでランキングには入りません'); return; }
   // この端末のランキング
   const local = store.get('local', []); local.push({ name: account ? account.name : 'ゲスト', score: r.score, dist: r.dist, bar: r.bar, date: new Date().toLocaleDateString('ja-JP') });
   local.sort((a, b) => b.score - a.score || b.dist - a.dist); store.set('local', local.slice(0, 20));
   if (!CONFIG.SERVER_URL) { note('この端末のランキングに記録しました'); return; }
-  if (!account) { note('ゲストなのでオンラインランキングには送りません(ログインすると参加できます)'); return; }
-  note('ランキングに送っています…');
   const data = { score: r.score, dist: r.dist, crit: r.crit, combo: r.combo, sec: r.sec, bar: r.bar ? 1 : 0 };
+  if (!account) {
+    if (r.dist > 0) {
+      guestScore = { data, note };
+      $('registerBtn').classList.remove('hidden');
+      note(isNewBest ? 'いい記録!登録すると、このスコアでランキングに参加できます' : 'ゲストなので、まだランキングには送っていません。登録すると参加できます');
+    } else note('ゲストなのでオンラインランキングには送りません(ログインすると参加できます)');
+    return;
+  }
+  sendScore(data, note);
+}
+async function sendScore(data, note) {
+  note('ランキングに送っています…');
   try {
-    const res = await apiPost(Object.assign({ action: 'score', name: account.name, token: account.token }, data));
+    const res = await postScore(data);
     if (res.ok) {
       const msg = '今期 ' + res.seasonRank + '位 / 歴代 ' + res.allRank + '位' + (res.newBest ? '(自己ベスト!)' : '');
       note(msg, true);
+      flushPending();   // 前に送れなかったスコアがあれば、ついでに送る
     } else {
       if (['busy', 'too_fast', 'server'].includes(res.error)) {
         addPending(data);
