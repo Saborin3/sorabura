@@ -200,7 +200,7 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
       <li><b>スピードアップ</b>:スコアが15万点をこえると「タタタタン!」と鳴って、ブランコがさらに速くなっていきます。</li>
       <li><b>ゆれ幅チェンジ</b>:30万点をこえると、ブランコごとにゆれの大きさがバラバラになります(「ここ」の位置が毎回かわります)。合図の音も、ブランコごとにいちばん高くなる高さがかわります。リズム(タイミング)は今までどおりなので、ランプと音のリズムをたよりに!</li>
-      <li><b>強風</b>:50万点をこえると、ときどき、飛んでいるあいだに「ビュオーッ」と風がふきます(画面を風の線が横切ります)。つぎのブランコをつかんだあと、音が上がっていくとちゅうで、ゆれが速くなったり遅くなったりします。合図の音と光は、そこから新しい速さで続きます。</li>
+      <li><b>強風</b>:50万点をこえると、ときどき、飛んでいるあいだに「ビュオーッ」と風がふきます(画面を風の線が横切ります)。つぎのブランコをつかんだ直後に、ゆれがぐっと速くなったり遅くなったりします。いつものリズムで押すとずれるので、音と光をよく聞いて・見て!合図の音と光は、そこから新しい速さで続きます。</li>
       <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:スコアが5万点をこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
@@ -443,8 +443,12 @@ const SFX = {
   wind(from, to, dir) { if (!ac) return []; const t0 = Math.max(ac.currentTime, from), len = Math.max(0.12, to - t0);
     const s = ac.createBufferSource(); s.buffer = noiseBuf; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
     bp.frequency.setValueAtTime(350, t0); bp.frequency.exponentialRampToValueAtTime(1400, t0 + len * 0.6); bp.frequency.exponentialRampToValueAtTime(500, t0 + len);
-    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(1.3, t0 + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(3.4, t0 + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
     s.connect(bp); bp.connect(g); let out = g;
+    // 低い「ゴォー」(風の重さ)
+    const s2 = ac.createBufferSource(); s2.buffer = noiseBuf; const lp2 = ac.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 260;
+    const g2 = ac.createGain(); g2.gain.setValueAtTime(0.0001, t0); g2.gain.exponentialRampToValueAtTime(2.6, t0 + len * 0.35); g2.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    s2.connect(lp2); lp2.connect(g2); g2.connect(g); s2.start(t0); s2.stop(t0 + len + 0.05);
     if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.setValueAtTime(-0.8 * dir, t0); p.pan.linearRampToValueAtTime(0.8 * dir, t0 + len); g.connect(p); out = p; }
     out.connect(master); s.start(t0); s.stop(t0 + len + 0.05); return [{ osc: s, g }]; },
   pi() { if (!ac) return; tone({ f: 1568, at: ac.currentTime + 0.16, dur: 0.14, type: 'square', vol: 0.38 }); tone({ f: 3136, at: ac.currentTime + 0.16, dur: 0.1, type: 'sine', vol: 0.15 }); },
@@ -782,14 +786,14 @@ const WIND_SCORE = 500000;     // 強風
 // 強風:同じブランコのゆれの途中(いちばん後ろに来たとき)で、速さが変わる
 // 強風:前のブランコから飛んでいるあいだに「ビュオーッ」と知らせて、
 // つかんだあと、音が上がっていくとちゅう(ゆれの 0.2)で速さが変わる。ゆれの位置はつながったまま、そこから新しい速さになる
-const WIND_AT = 0.2;
+const WIND_AT = 0.05;   // つかんだ直後に変える(おそく変えると「キン!」がほとんどずれず、効かない)
 function windSound(fromMs, toMs, dir) { cancelWind(); G.windNodes = SFX.wind(aTime(realOf(fromMs)), aTime(realOf(toMs)), dir) || []; }
 function updateWind(now) {
   const tc = G.t0 + periodMs() * WIND_AT;
   if (now < tc) return;
   const phase = (now - G.t0) / periodMs();                 // 今のゆれの位置(0〜1)
   let np = Math.max(0.62, Math.min(1.8, G.period * G.wind.factor));
-  if (Math.abs(np / G.period - 1) < 0.12) np = Math.min(1.8, G.period * (G.wind.factor < 1 ? 1.35 : 0.78));   // もう速くできない(遅くできない)ときは逆にする
+  if (Math.abs(np / G.period - 1) < 0.15) np = Math.min(1.8, G.period * (G.wind.factor < 1 ? 1.5 : 0.7));   // もう速くできない(遅くできない)ときは逆にする
   G.period = np;
   G.t0 = now - phase * periodMs();                         // 同じ位置のまま、新しい速さに
   cancelBeats(); G.epoch++; G.lit.clear();                 // 合図の音を、新しい速さで続きから鳴らし直す
@@ -879,8 +883,8 @@ function release() {
     G.state = 'fly';
     G.fly = { start: now, dur: kind === 'crit' ? 1150 : 780, from, to, h: kind === 'crit' ? 105 : 60, j, kind, th0: th, jth: trap(j).th, amp };
     // 50万点から、ときどき強風(飛んでいるあいだに知らせる)
-    if (G.score >= WIND_SCORE && Math.random() < 0.35) {
-      const wd = { factor: Math.random() < 0.5 ? 0.78 : 1.35, dir: Math.random() < 0.5 ? 1 : -1 };
+    if (G.score >= WIND_SCORE && Math.random() < 0.45) {
+      const wd = { factor: Math.random() < 0.5 ? 0.7 : 1.5, dir: Math.random() < 0.5 ? 1 : -1 };
       G.fly.wind = wd;
       windSound(now + 150, now + G.fly.dur + 100, wd.dir);   // つかんだ直後まで鳴る(速さが変わるのはそのあと)
       vibrate([80, 40, 80]); G.windFx = { t: now, dir: wd.dir }; G.banner = { text: '強風!', t: now };   // 速くなるか遅くなるかは、変わる瞬間までわからない
@@ -1304,7 +1308,10 @@ function gameOver() {
 // きょりを身近なものとくらべる。いくつか用意して、毎回ちがうのが出るように
 const MILESTONES = [
   [2, '立ち幅跳び'], [11, '路線バス1台'], [24, 'テニスコート'], [25, '市民プール'], [50, '50m走'],
-  [100, '100m走'], [120, 'ホームラン'], [333, '東京タワー'], [400, '新幹線16両'], [634, 'スカイツリー'], [3776, '富士山'],
+  [100, '100m走'], [120, 'ホームラン'], [333, '東京タワー'], [400, '新幹線16両'], [634, 'スカイツリー'],
+  [828, 'ブルジュ・ハリファ(世界一高いビル)'], [877, '筑波山'], [1000, '1km'], [3776, '富士山'], [3911, '明石海峡大橋'],
+  [5000, '皇居1周'], [8849, 'エベレスト'], [10000, 'ジェット機が飛ぶ高さ'], [10920, 'マリアナ海溝の深さ'],
+  [34500, '山手線1周'], [42195, 'フルマラソン'], [53850, '青函トンネル'], [100000, '宇宙(地上100km)'],
 ];
 const TAUNTS = [
   // ※ 目・耳など体のことをいじる文句は入れない(いじるのは記録と棒人間だけ)
@@ -1320,6 +1327,20 @@ const TAUNTS = [
   [200, ['{d}m!もうサーカスの団長に声かけられるレベル', 'これなら東京タワーも見えてきた', '{d}m!ブランコの上で暮らしてる?']],
   [333, ['東京タワーを横にたおしたより遠い!', '{d}m!これならスカイツリー超えられるね', 'もう棒人間じゃなくて鳥']],
   [634, ['スカイツリー超え!!', '{d}m!空中ブランコ界の伝説', 'もうランキング1位、ねらえるよ']],
+  [828, ['世界一高いビル、ブルジュ・ハリファ(828m)超え!', '{d}m!ドバイの人もびっくり', '世界一高いビルも、横にたおせば通過点']],
+  [877, ['{d}m!筑波山(877m)より遠くまで来た', '筑波山のてっぺんまで届く距離!', 'ガマの油、もう売れるよ']],
+  [1000, ['{d}m!ついに1kmの大台', 'もう歩いて帰るのがめんどくさい距離', '棒人間、そろそろ腕がパンパン']],
+  [2000, ['{d}m!もうプロのサーカス団員', 'ブランコ、何本つかんだか覚えてる?', '観客、そろそろ帰りはじめてるよ']],
+  [3776, ['富士山超え!!日本一!', '{d}m!富士山を横にたおしても届かない', 'ふもとから山頂まで、ブランコで行けた']],
+  [3911, ['明石海峡大橋(3911m)を渡りきった!', '{d}m!本州から淡路島まで行けた', '橋がなくてもブランコで渡れる']],
+  [5000, ['{d}m!皇居1周(約5km)できた', 'ランナーたちを追いこした', '棒人間、汗だく']],
+  [8849, ['エベレスト超え!!世界一!', '{d}m!地球にこれより高い山はない', '酸素ボンベいる?']],
+  [10000, ['{d}m!ジェット機が飛ぶ高さ(約1万m)', '窓の外に棒人間が見えたら、それは君', 'もう雲の上の存在']],
+  [10920, ['マリアナ海溝(約1万920m)より遠い!', '{d}m!地球でいちばん深い海の底も超えた', '深海魚もびっくり']],
+  [34500, ['山手線1周(34.5km)しちゃった!', '{d}m!電車に乗るよりブランコ', '東京を1周してきた棒人間']],
+  [42195, ['フルマラソン完走!!', '{d}m!ブランコでマラソンした人、たぶん初めて', 'もう伝説']],
+  [53850, ['青函トンネル(53.85km)より長い!', '{d}m!本州から北海道まで行けた', 'トンネルいらずの棒人間']],
+  [100000, ['宇宙に到達!!(地上100km)', 'もう棒人間じゃなくて宇宙飛行士', '{d}m!重力、仕事してる?']],
 ];
 // 最後のミスの仕方で煽る
 const MISS_TAUNTS = { early: 'あせりすぎ。ブランコは逃げないよ', late: 'はなすの忘れてた?', slip: '握力の問題じゃないよ?' };
@@ -1336,6 +1357,7 @@ function tauntFor(dist, bestDist, isNewBest, lastMiss) {
   if (isNewBest && dist > 0) sub = 'きょりの自己ベスト更新!' + (next ? ' つぎは' + next[1] + '(' + next[0] + 'm)だ!' : '');
   else if (bestDist > dist && bestDist - dist <= 30) sub = '自己ベストまで、あと' + (bestDist - dist) + 'm!くやしい!';
   else if (next) sub = 'あと' + (next[0] - dist) + 'mで「' + next[1] + '」こえ!';
+  else sub = 'もう、くらべるものがない…';
   return { main, sub };
 }
 
