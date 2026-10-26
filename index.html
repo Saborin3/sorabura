@@ -114,6 +114,29 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
   .ttl{border:1px solid CanvasText}
   ol.rank li.me{border-width:4px}
 }
+/* ハイコントラストで「暗い画面」のとき:黒地に白・黄色・水色だけ */
+html.hc-dark, html.hc-dark *{forced-color-adjust:none}
+html.hc-dark body, html.hc-dark .screen{background:#000;color:#fff}
+html.hc-dark .btn{background:#000;color:#fff;border:2px solid #fff;box-shadow:none}
+html.hc-dark .btn:not(.ghost){color:#ff0;border:3px solid #ff0}
+html.hc-dark .panel, html.hc-dark .account, html.hc-dark .stats div, html.hc-dark ol.rank li, html.hc-dark #hud .box, html.hc-dark .tab{background:#000;color:#fff;border-color:#fff}
+html.hc-dark .tab[aria-selected=true]{color:#ff0;border:5px solid #ff0;text-decoration:underline;text-underline-offset:4px}
+html.hc-dark .tab[aria-selected=true]::before{content:"● "}
+html.hc-dark ol.rank li.me{border:4px solid #ff0}
+html.hc-dark .note, html.hc-dark .season, html.hc-dark .champs, html.hc-dark .stats div, html.hc-dark h1 small{color:#fff}
+html.hc-dark .big-score, html.hc-dark .next-goal{color:#ff0}
+html.hc-dark .ttl{background:#000;color:#ff0;border:1px solid #ff0}
+html.hc-dark .ttl-text{color:#ff0}
+html.hc-dark .barmark{color:#fff;border-color:#fff}
+html.hc-dark input[type=text], html.hc-dark input[type=password]{background:#000;color:#fff;border:2px solid #fff}
+html.hc-dark input[type=checkbox], html.hc-dark input[type=range]{accent-color:#ff0}
+html.hc-dark #pauseBtn{background:#000;color:#fff;border:2px solid #fff}
+html.hc-dark #releaseBtn{background:#000;color:#ff0;border:4px solid #ff0;box-shadow:none}
+html.hc-dark #overlay{background:rgba(0,0,0,.92)}
+html.hc-dark .lamp{background:#000;color:#fff;border-color:#fff}
+html.hc-dark .lamp.on{background:#ff0;color:#000;border-color:#ff0}
+html.hc-dark .vo-note{border-top-color:#fff}
+html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark .tab:focus-visible{outline:4px solid #0ff}
 @media (prefers-reduced-motion:reduce){.btn:active,#releaseBtn:active{transform:none}}
 </style>
 </head>
@@ -193,6 +216,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <label class="set">はなす位置のガイドを表示<input type="checkbox" id="sGuide"></label>
       <label class="set"><span>下のタイミングバーを表示<br><small class="note">オンにすると点数 ×0.8(れんしゅうは そのまま)</small></span><input type="checkbox" id="sBar"></label>
       <label class="set">動きを減らす(回転・ゆれなし)<input type="checkbox" id="sCalm"></label>
+      <label class="set"><span>ハイコントラストのときは暗い画面にする<br><small class="note">まぶしさが苦手な人向け。オフにすると Windows の色(白い背景など)に合わせます</small></span><input type="checkbox" id="sHcDark"></label>
       <label class="set">タイミング補正<input type="range" id="sOff" min="-200" max="200" step="10"><span class="val" id="vOff"></span></label>
     </div>
     <p class="note">Bluetoothイヤホンなどで音が遅れて聞こえるときは、補正を「＋」にしてください。いつも「おそい」と出るなら＋、「はやい」と出るならー。</p>
@@ -278,7 +302,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('sorabura_' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('sorabura_' + k); } catch (e) {} },
 };
-const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false }, store.get('settings', {}));
+const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true }, store.get('settings', {}));
 let account = store.get('account', null);   // {name, token}
 
 /* ---------- 読み上げ ---------- */
@@ -575,6 +599,8 @@ function bindSettings() {
   $('sGuide').addEventListener('change', e => { settings.guide = e.target.checked; save(); });
   $('sBar').addEventListener('change', e => { settings.bar = e.target.checked; save(); });
   $('sCalm').addEventListener('change', e => { settings.calm = e.target.checked; save(); });
+  $('sHcDark').checked = settings.hcDark;
+  $('sHcDark').addEventListener('change', e => { settings.hcDark = e.target.checked; save(); updatePalette(); });
   $('sOff').addEventListener('input', e => { settings.offset = +e.target.value; save(); });
 }
 bindSettings();
@@ -879,12 +905,20 @@ const PAL = { bg1: '#0b1830', bg2: '#2a1f45', floor: '#1a1430', beam: '#3a4f6b',
 let C = PAL;
 const hcMq = window.matchMedia ? matchMedia('(forced-colors: active)') : null;
 function sysColor(kw) { const d = document.createElement('div'); d.style.color = kw; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; }
+// 色の明るさ(0〜1)
+function lum(c) { const m = String(c).match(/\d+(\.\d+)?/g); if (!m) return 0; const [r, g, b] = m.map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; }
 function updatePalette() {
-  if (!hcMq || !hcMq.matches) { C = PAL; return; }
-  const bg = sysColor('Canvas'), fg = sysColor('CanvasText'), hl = sysColor('Highlight'), hlt = sysColor('HighlightText'), link = sysColor('LinkText');
+  const hc = !!(hcMq && hcMq.matches);
+  let bg = hc ? sysColor('Canvas') : '', fg, hl, hlt, link;
+  // ハイコントラストで背景が明るいテーマのとき、設定がオンなら黒地のハイコントラストにする(羞明の人向け)
+  const forceDark = hc && settings.hcDark && lum(bg) > 0.5;
+  document.documentElement.classList.toggle('hc-dark', forceDark);
+  if (!hc) { C = PAL; return; }
+  if (forceDark) { bg = '#000000'; fg = '#ffffff'; hl = '#ffff00'; hlt = '#000000'; link = '#00ffff'; }
+  else { fg = sysColor('CanvasText'); hl = sysColor('Highlight'); hlt = sysColor('HighlightText'); link = sysColor('LinkText'); }
   C = { bg1: bg, bg2: bg, floor: bg, beam: fg, net: fg, stage: fg, rope: fg, bar: fg, barHeld: hl, next: link, crit: hl, dist: fg,
     guide: hl, ring: fg, ringHit: hl, ringCenter: fg, ringFill: hl, lampOffLine: fg, lampOffFill: bg, lampOffText: fg,
-    lampOnLine: fg, lampOn: hl, lampNow: hl, lampOnText: hlt, barBg: bg, zSafe: fg, zNice: fg, zCrit: hl,
+    lampOnLine: fg, lampOn: forceDark ? link : hl, lampNow: hl,   /* 黒地のときは 1・2・3 を水色、「今」を黄色に */ lampOnText: hlt, barBg: bg, zSafe: fg, zNice: fg, zCrit: hl,
     needle: fg, text: fg, hint: fg, textStroke: bg, ink: fg, head: bg, hc: true };
 }
 if (hcMq) { (hcMq.addEventListener ? hcMq.addEventListener('change', updatePalette) : hcMq.addListener(updatePalette)); }
