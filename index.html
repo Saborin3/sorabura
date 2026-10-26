@@ -200,7 +200,7 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
       <li><b>スピードアップ</b>:スコアが15万点をこえると「タタタタン!」と鳴って、ブランコがさらに速くなっていきます。</li>
       <li><b>ゆれ幅チェンジ</b>:30万点をこえると、ブランコごとにゆれの大きさがバラバラになります(「ここ」の位置が毎回かわります)。合図の音も、ブランコごとにいちばん高くなる高さがかわります。リズム(タイミング)は今までどおりなので、ランプと音のリズムをたよりに!</li>
-      <li><b>強風</b>:50万点をこえると、ときどき、飛んでいるあいだに「ビュオーッ」と風がふきます(画面を風の線が横切ります)。つぎのブランコをつかんだ直後に、ゆれがぐっと速くなったり遅くなったりします。いつものリズムで押すとずれるので、音と光をよく聞いて・見て!合図の音と光は、そこから新しい速さで続きます。</li>
+      <li><b>強風</b>:50万点をこえると、ときどき、飛んでいるあいだに風がふきます。<b>追い風</b>(風の線が左から右へ、音は「ヒュオーッ」と上がっていく)なら、つぎのブランコをつかんだ直後にゆれが速くなります。<b>向かい風</b>(右から左へ、音は「ゴォーッ」と下がっていく)なら遅くなります。風の向きを聞いて・見て、先に読もう!合図の音と光は、そこから新しい速さで続きます。</li>
       <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:スコアが5万点をこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
@@ -442,11 +442,13 @@ const SFX = {
   // 強風「ビュオーッ」(from〜to は秒。合図の「キン!」にかからない時間に鳴らす)
   wind(from, to, dir) { if (!ac) return []; const t0 = Math.max(ac.currentTime, from), len = Math.max(0.12, to - t0);
     const s = ac.createBufferSource(); s.buffer = noiseBuf; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
-    bp.frequency.setValueAtTime(350, t0); bp.frequency.exponentialRampToValueAtTime(1400, t0 + len * 0.6); bp.frequency.exponentialRampToValueAtTime(500, t0 + len);
+    // 追い風(dir=1)は「ヒュオーッ↗」と上がる、向かい風(dir=-1)は「ゴォーッ↘」と下がる(スピーカーが1つでも聞き分けられるように)
+    if (dir > 0) { bp.frequency.setValueAtTime(380, t0); bp.frequency.exponentialRampToValueAtTime(2400, t0 + len); }
+    else { bp.frequency.setValueAtTime(1500, t0); bp.frequency.exponentialRampToValueAtTime(240, t0 + len); }
     const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(3.4, t0 + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
     s.connect(bp); bp.connect(g); let out = g;
     // 低い「ゴォー」(風の重さ)
-    const s2 = ac.createBufferSource(); s2.buffer = noiseBuf; const lp2 = ac.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 260;
+    const s2 = ac.createBufferSource(); s2.buffer = noiseBuf; const lp2 = ac.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = dir > 0 ? 200 : 320;
     const g2 = ac.createGain(); g2.gain.setValueAtTime(0.0001, t0); g2.gain.exponentialRampToValueAtTime(2.6, t0 + len * 0.35); g2.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
     s2.connect(lp2); lp2.connect(g2); g2.connect(g); s2.start(t0); s2.stop(t0 + len + 0.05);
     if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.setValueAtTime(-0.8 * dir, t0); p.pan.linearRampToValueAtTime(0.8 * dir, t0 + len); g.connect(p); out = p; }
@@ -792,8 +794,7 @@ function updateWind(now) {
   const tc = G.t0 + periodMs() * WIND_AT;
   if (now < tc) return;
   const phase = (now - G.t0) / periodMs();                 // 今のゆれの位置(0〜1)
-  let np = Math.max(0.62, Math.min(1.8, G.period * G.wind.factor));
-  if (Math.abs(np / G.period - 1) < 0.15) np = Math.min(1.8, G.period * (G.wind.factor < 1 ? 1.5 : 0.7));   // もう速くできない(遅くできない)ときは逆にする
+  const np = Math.max(0.52, Math.min(1.8, G.period * G.wind.factor));   // 追い風のときだけ、ふだんの最速(0.62秒)よりさらに速くなれる
   G.period = np;
   G.t0 = now - phase * periodMs();                         // 同じ位置のまま、新しい速さに
   cancelBeats(); G.epoch++; G.lit.clear();                 // 合図の音を、新しい速さで続きから鳴らし直す
@@ -884,10 +885,12 @@ function release() {
     G.fly = { start: now, dur: kind === 'crit' ? 1150 : 780, from, to, h: kind === 'crit' ? 105 : 60, j, kind, th0: th, jth: trap(j).th, amp };
     // 50万点から、ときどき強風(飛んでいるあいだに知らせる)
     if (G.score >= WIND_SCORE && Math.random() < 0.45) {
-      const wd = { factor: Math.random() < 0.5 ? 0.7 : 1.5, dir: Math.random() < 0.5 ? 1 : -1 };
+      // 追い風(左→右。進む向きと同じ)は速くなる、向かい風(右→左)は遅くなる。
+      const tail = Math.random() < 0.5;
+      const wd = { factor: tail ? 0.7 : 1.5, dir: tail ? 1 : -1 };
       G.fly.wind = wd;
       windSound(now + 150, now + G.fly.dur + 100, wd.dir);   // つかんだ直後まで鳴る(速さが変わるのはそのあと)
-      vibrate([80, 40, 80]); G.windFx = { t: now, dir: wd.dir }; G.banner = { text: '強風!', t: now };   // 速くなるか遅くなるかは、変わる瞬間までわからない
+      vibrate([80, 40, 80]); G.windFx = { t: now, dir: wd.dir }; G.banner = { text: tail ? '追い風!' : '向かい風!', t: now };
     }
   }
 }
@@ -1142,7 +1145,7 @@ function drawBanner(now) {
   if (!G.banner) return; const a = (now - G.banner.t) / 1200; if (a > 1) { G.banner = null; return; }
   ctx.save(); ctx.globalAlpha = a > 0.75 ? (1 - a) / 0.25 : 1;
   const bt = G.banner.text;
-  bigText(bt === 'スロー' ? '◷ スロー' : bt === 'スピードアップ!' ? '▶▶ スピードアップ!' : bt === 'ゆれ幅チェンジ!' ? '〰 ゆれ幅チェンジ!' : bt.startsWith('強風') ? '≋ ' + bt : '▶ ' + bt, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
+  bigText(bt === 'スロー' ? '◷ スロー' : bt === 'スピードアップ!' ? '▶▶ スピードアップ!' : bt === 'ゆれ幅チェンジ!' ? '〰 ゆれ幅チェンジ!' : bt === '追い風!' ? '≫ 追い風!' : bt === '向かい風!' ? '≪ 向かい風!' : bt.startsWith('強風') ? '≋ ' + bt : '▶ ' + bt, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
   ctx.restore();
 }
 function nextTarget(now) {
