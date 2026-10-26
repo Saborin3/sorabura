@@ -162,6 +162,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <li><b>音</b>:ゆれに合わせて「キュイーン」と音がだんだん高くなります。<b>いちばん高くなって「キン!」と鳴った瞬間</b>に手をはなします。そのあと音は下がって、次のゆれでまた上がります(ブランコ1往復で音も1周)。</li>
       <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
+      <li><b>スピードアップ</b>:スコアが15万点をこえると「タタタタン!」と鳴って、ブランコがさらに速くなっていきます。</li>
       <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:スコアが5万点をこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
@@ -379,6 +380,8 @@ const SFX = {
   grab() { if (!ac) return; noiseHit(ac.currentTime, 0.08, 2500, 0.5); tone({ f: 330, dur: 0.08, type: 'square', vol: 0.12 }); },
   // スローの始まり「カチッ」(時計の針の音)と、終わりの「ピッ」
   kachi() { if (!ac) return; const t = ac.currentTime + 0.09; noiseHit(t, 0.03, 4200, 0.9); tone({ f: 1900, at: t, dur: 0.03, type: 'square', vol: 0.22 }); tone({ f: 950, at: t + 0.012, dur: 0.05, type: 'square', vol: 0.12 }); },
+  // スピードアップの合図(速く上がる「タタタタン!」)
+  speedup() { if (!ac) return; const t = ac.currentTime + 0.05; [784, 988, 1175, 1568].forEach((f, k) => { tone({ f, at: t + k * 0.06, dur: k < 3 ? 0.07 : 0.25, type: 'square', vol: 0.18 }); }); noiseHit(t + 0.18, 0.12, 6000, 0.35); },
   pi() { if (!ac) return; tone({ f: 1568, at: ac.currentTime + 0.09, dur: 0.1, type: 'square', vol: 0.2 }); },
   // 鳥の鳴き声。小鳥のさえずりのように、高い音が速くふるえながら上下する「ピチュピチュ」「チュリリ」
   // (合図の「キン!」はふるえない一定の音なので、聞き分けられる)
@@ -596,10 +599,14 @@ const WIN = {
 };
 // つぎのブランコの速さ(1往復の秒数)。だんだん速くなって 1.0 秒まで。
 // 15回目からはブランコごとに速さを少しずつ変えて(最大±15%)、同じリズムで押し続けられないようにする
-function nextPeriod(catches) {
-  const base = Math.max(1.0, 2.4 * Math.pow(0.97, catches));
+// 15万点をこえると、さらに速くなる(1.0秒 → 0.72秒まで。35万点でいちばん速い)
+const FAST_SCORE = 150000;
+function nextPeriod(catches, score) {
+  let base = Math.max(1.0, 2.4 * Math.pow(0.97, catches));
+  let min = 0.9;
+  if (score >= FAST_SCORE) { base = Math.min(base, 1.0 - 0.28 * Math.min(1, (score - FAST_SCORE) / 200000)); min = 0.65; }
   const amp = 0.15 * Math.min(1, Math.max(0, (catches - 15) / 15));
-  return Math.max(0.9, base * (1 + (Math.random() * 2 - 1) * amp));
+  return Math.max(min, base * (1 + (Math.random() * 2 - 1) * amp));
 }
 const TARGET_PHASE = 0.40;         // 1回のゆれのうち、はなす瞬間(前にふり上がる途中)
 const MAX_CYCLES = 4;              // 合図は4回まで。そのあと手がすべる
@@ -687,11 +694,17 @@ const BIRD_SONGS = [
 ];
 const BIRD_SONG_LEN = 0.3;   // いちばん長い鳴き声の長さ(秒)        // 15回つかまったあと(75m)から、ときどき鳥が来る
 function onGrabEvents(now) {
+  // 15万点をこえた瞬間に「スピードアップ!」を音・声・絵で知らせる
+  if (!G.fastOn && G.score >= FAST_SCORE) {
+    G.fastOn = true; G.noSlow = 3; SFX.speedup(); vibrate([30, 30, 30, 30, 60]); say('スピードアップ');
+    G.banner = { text: 'スピードアップ!', t: now };
+  }
   // スロー:「カチッ」のあと遅くなり、何回かつかまると「ピッ」で元にもどる
   if (G.slowLeft > 0) {
     G.slowLeft--;
     if (G.slowLeft > 0) G.period = Math.min(2.6, G.period * SLOW_MUL);
     else { SFX.pi(); vibrate(40); G.banner = { text: 'もとの速さ', t: now }; }
+  } else if (G.noSlow > 0) { G.noSlow--;   // スピードアップの直後は、しばらくスローにしない
   } else if (G.score >= SLOW_SCORE && Math.random() < 0.12) {   // スローはたまに(出すぎると、ほとんどスローになってしまう)
     G.slowLeft = 2 + Math.floor(Math.random() * 3);   // 2〜4本のブランコのあいだ
     G.period = Math.min(2.6, G.period * SLOW_MUL);
@@ -801,7 +814,7 @@ function update(now, dt) {
     swingUpdate(2.2 * (1 - Math.abs(s - 0.5) * 1.4), 0);
     if (s >= 1) {
       G.i = F.j; G.catches++; G.state = 'swing'; G.fly = null;
-      G.period = nextPeriod(G.catches);
+      G.period = nextPeriod(G.catches, G.score);
       onGrabEvents(now);
       G.t0 = now; G.lit.clear(); G.sched.clear();
       SFX.grab(); updateHud();
@@ -975,7 +988,7 @@ function drawBird(now) {
 function drawBanner(now) {
   if (!G.banner) return; const a = (now - G.banner.t) / 1200; if (a > 1) { G.banner = null; return; }
   ctx.save(); ctx.globalAlpha = a > 0.75 ? (1 - a) / 0.25 : 1;
-  bigText(G.banner.text === 'スロー' ? '◷ スロー' : '▶ ' + G.banner.text, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
+  bigText(G.banner.text === 'スロー' ? '◷ スロー' : G.banner.text === 'スピードアップ!' ? '▶▶ スピードアップ!' : '▶ ' + G.banner.text, C.hc ? C.text : '#56B4E9', Math.max(view.h * 0.42, 236), 32);
   ctx.restore();
 }
 function nextTarget(now) {
