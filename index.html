@@ -163,7 +163,7 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
       <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
       <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
-      <li><b>鳥</b>:75mをこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
+      <li><b>鳥</b>:スコアが5万点をこえると、ときどき大きな鳥が飛んできて「ピチュピチュ」とさえずったり、上のランプの前を横切ったりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
     </ol></div>
     <div class="panel judges" aria-label="判定の種類">
@@ -282,9 +282,23 @@ let account = store.get('account', null);   // {name, token}
 
 /* ---------- 読み上げ ---------- */
 function announce(text) { const el = $('sr'); el.textContent = ''; setTimeout(() => { el.textContent = text; }, 30); }
-function say(text) {
+// ゲームの声(ブラウザの読み上げ機能。VoiceOver とは別なので、VoiceOver を切っていても鳴る)
+// iPhone の Safari は「止めた直後に話す」と、新しい声が消えることがあるので、
+//   ・話している途中のときだけ止めて、少し待ってから話す
+//   ・important(結果の煽り文句など)は、話し始めなかったらもう一度だけ話す
+function say(text, important) {
   if (!settings.voice || !('speechSynthesis' in window)) return;
-  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'ja-JP'; u.rate = 1.4; u.volume = Math.min(1, settings.vol + 0.1); speechSynthesis.speak(u); } catch (e) {}
+  const ss = window.speechSynthesis;
+  const make = () => { const u = new SpeechSynthesisUtterance(text); u.lang = 'ja-JP'; u.rate = 1.4; u.volume = Math.min(1, settings.vol + 0.1); return u; };
+  const go = () => {
+    try {
+      if (ss.paused) ss.resume();
+      const u = make(); let started = false; u.onstart = () => { started = true; };
+      ss.speak(u);
+      if (important) setTimeout(() => { if (!started && !ss.speaking) { try { ss.cancel(); ss.speak(make()); } catch (e) {} } }, 1500);
+    } catch (e) {}
+  };
+  try { if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(go, 120); } else go(); } catch (e) {}
 }
 function vibrate(ms) { if (settings.vib && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 
@@ -664,7 +678,7 @@ function cancelBeats() {
 /* ---------- スローと鳥 ---------- */
 const SLOW_SCORE = 100000;   // この点数をこえると、ときどきスローになる
 const SLOW_MUL = 1.6;        // スローのときのゆれの遅さ(1往復の時間が1.6倍)
-const BIRD_FROM = 15;
+const BIRD_SCORE = 50000;    // この点数をこえると、ときどき鳥が来る
 // 鳴き声のパターン:[始まりのずれ(秒), 長さ, 始まりの高さ, まん中, 終わり](Hz)
 const BIRD_SONGS = [
   [[0, 0.07, 3200, 5200, 3800], [0.09, 0.07, 3200, 5200, 3800]],                                   // ピチュ・ピチュ
@@ -684,7 +698,7 @@ function onGrabEvents(now) {
     SFX.kachi(); vibrate([20, 60, 20]); G.banner = { text: 'スロー', t: now };
   }
   // 鳥:画面の上を横切りながら鳴いて、ランプにもかぶる(音でも絵でもじゃまする)
-  if (!G.bird && G.catches >= BIRD_FROM && Math.random() < 0.25) spawnBird(now);
+  if (!G.bird && G.score >= BIRD_SCORE && Math.random() < 0.25) spawnBird(now);
 }
 function spawnBird(now) {
   const dur = 2600 + Math.random() * 1400, start = now + 300 + Math.random() * 900, dir = Math.random() < 0.5 ? 1 : -1;
@@ -1178,7 +1192,7 @@ async function showResult(r) {
   $('resSr').textContent = '。' + head;
   show('result');
   // ゲームの声(せっていの「ゲーム中の声」)でも煽り文句を読む。スクリーンリーダーを使っていない人にも聞こえるように
-  setTimeout(() => say(t.main + '。' + (t.sub ? t.sub + '。' : '') + r.dist + 'メートル、' + r.score + '点'), 350);
+  setTimeout(() => say(t.main + '。' + (t.sub ? t.sub + '。' : '') + r.dist + 'メートル、' + r.score + '点', true), 350);
   if (r.practice) { note('れんしゅうなのでランキングには入りません'); return; }
   // この端末のランキング
   const local = store.get('local', []); local.push({ name: account ? account.name : 'ゲスト', score: r.score, dist: r.dist, bar: r.bar, date: new Date().toLocaleDateString('ja-JP') });
