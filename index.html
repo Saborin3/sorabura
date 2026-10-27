@@ -345,7 +345,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('sorabura_' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('sorabura_' + k); } catch (e) {} },
 };
-const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true, mode: 'normal' }, store.get('settings', {}));
+const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true }, store.get('settings', {}));
 let account = store.get('account', null);   // {name, token}
 
 /* ---------- 読み上げ ---------- */
@@ -764,9 +764,13 @@ function trap(i) { if (!G.traps.has(i)) G.traps.set(i, { th: 0.32 * Math.sin(i *
 // モード:ノールック(音だけ)は画面をまっ黒に、サイレント(絵だけ)は音を全部消す。ゲームが自分で消すのでズルできない
 const MODES = ['normal', 'nolook', 'silent'];   // 点数の倍率はなし。ランキングにモードのマークがつく
 const MODE_NAME = { normal: 'ふつう', nolook: 'ノールック', silent: 'サイレント' };
+// 最初はノールック:全盲の人が気づかずに「ふつう」で遊んでしまわないように(見えている人なら、手のひらや鳥ですぐ気づける)
+// えらんだモードは、自分でえらんだときだけ別に保存する(ほかの設定を変えただけで「ふつう」が保存されないように)
+settings.mode = store.get('mode', 'nolook');
+if (!MODES.includes(settings.mode)) settings.mode = 'nolook';
 function bindModes() {
   const radios = document.querySelectorAll('input[name=mode]');
-  radios.forEach(r => { r.checked = r.value === settings.mode; r.addEventListener('change', () => { if (r.checked) { settings.mode = r.value; store.set('settings', settings); } }); });
+  radios.forEach(r => { r.checked = r.value === settings.mode; r.addEventListener('change', () => { if (r.checked) { settings.mode = r.value; store.set('mode', r.value); } }); });
 }
 bindModes();
 function newGame(practice) {
@@ -777,7 +781,7 @@ function newGame(practice) {
   const now = performance.now();
   G = {
     cover: Math.random() < 0.5 ? 'hand' : 'bluebird', coverSeed: Math.random() * 1000,   // ノールックのふた(手のひらか青い鳥)
-    practice, mode: MODES.includes(settings.mode) ? settings.mode : 'normal', bar: settings.bar, state: 'swing', i: 0, t0: now + 1600, period: 2.4,
+    practice, mode: MODES.includes(settings.mode) ? settings.mode : 'nolook', bar: settings.bar, state: 'swing', i: 0, t0: now + 1600, period: 2.4,
     lives: practice ? Infinity : 1, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0,   // 本番は1回ミスしたらおしまい
     startAt: now, pausedTotal: 0, pausedAt: 0, paused: false,
     traps: new Map(), sched: new Map(), lit: new Set(), fly: null, net: null, pop: null, cam: 0, lastT: now,
@@ -1413,7 +1417,8 @@ document.addEventListener('keydown', e => {
 function sayStatus() {
   if (!G) return;
   const t = 'スコア ' + G.score + '、きょり ' + G.i * 5 + 'メートル、' + (G.practice ? 'れんしゅう中' : '一発勝負') + '、コンボ ' + G.combo;
-  if (settings.voice && 'speechSynthesis' in window) say(t); else announce(t);
+  // サイレントはゲームの声を出さないので、画面読み上げソフト用の欄に出す
+  if (settings.voice && 'speechSynthesis' in window && G.mode !== 'silent') say(t); else announce(t);
 }
 
 /* ---------- 一時停止 ---------- */
