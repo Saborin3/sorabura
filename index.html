@@ -70,6 +70,8 @@ ol.rank .no{font-size:20px;font-weight:bold;text-align:center}
 ol.rank .nm{font-size:17px;display:flex;align-items:center;min-width:0}
 ol.rank .nm>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 ol.rank .nm .ttl,ol.rank .nm .barmark{flex-shrink:0}
+/* ノールックだけ色つき(水色の地に濃い文字)。ほかのマークは灰色の枠 */
+.barmark.nolookmark{background:#56B4E9;color:#06263a;border-color:#56B4E9;font-weight:bold}
 .barmark{margin-left:6px;padding:0 5px;border:1px solid var(--sub);border-radius:6px;font-size:11px;color:var(--sub)}  /* 名前が長くても称号は切らない */
 ol.rank .sc{font-size:18px;font-weight:bold;font-variant-numeric:tabular-nums;text-align:right}
 ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:normal}
@@ -143,6 +145,8 @@ html.hc-dark .big-score, html.hc-dark .next-goal{color:#ff0}
 html.hc-dark .ttl{background:#000;color:#ff0;border:1px solid #ff0}
 html.hc-dark .ttl-text{color:#ff0}
 html.hc-dark .barmark{color:#fff;border-color:#fff}
+html.hc-dark .barmark.nolookmark{background:#000;color:#0ff;border:2px solid #0ff}
+@media (forced-colors:active){ .barmark.nolookmark{border-width:2px} }   /* Windowsの色に合わせるときは、色ではなく太い枠と太字で区別 */
 html.hc-dark input[type=text], html.hc-dark input[type=password]{background:#000;color:#fff;border:2px solid #fff}
 html.hc-dark input[type=checkbox], html.hc-dark input[type=range]{accent-color:#ff0}
 html.hc-dark #pauseBtn{background:#000;color:#fff;border:2px solid #fff}
@@ -1584,7 +1588,7 @@ function renderRank(list, meName, me) {
     const no = document.createElement('span'); no.className = 'no'; no.innerHTML = '<span></span><span class="sr-only">位、</span>'; no.firstChild.textContent = e.rank;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.appendChild(document.createElement('span')).textContent = e.name;
     const t = titleOf(e.titles); if (t) { const b = document.createElement('span'); b.className = 'ttl'; b.textContent = t; nm.appendChild(b); }
-    if (e.mode && e.mode !== 'normal' && MODE_NAME[e.mode]) { const b = document.createElement('span'); b.className = 'barmark'; b.textContent = MODE_NAME[e.mode]; nm.appendChild(b); }
+    if (e.mode && e.mode !== 'normal' && MODE_NAME[e.mode]) { const b = document.createElement('span'); b.className = 'barmark' + (e.mode === 'nolook' ? ' nolookmark' : ''); b.textContent = MODE_NAME[e.mode]; nm.appendChild(b); }
     if (e.bar) { const b = document.createElement('span'); b.className = 'barmark'; b.textContent = 'バーあり'; nm.appendChild(b); }
     const sc = document.createElement('span'); sc.className = 'sc'; sc.innerHTML = '<span></span><small></small>';
     sc.firstChild.textContent = e.score.toLocaleString(); sc.firstChild.insertAdjacentHTML('beforeend', '<span class="sr-only">点、きょり</span>');
