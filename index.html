@@ -178,15 +178,15 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
     <button class="btn ghost" id="practiceBtn">れんしゅう(ミスしてもOK)</button>
     <!-- テスト用(URLの最後に ?test をつけたときだけ出る)。れんしゅうなのでランキングには入らない -->
     <label class="panel hidden" id="testBox" style="display:flex;flex-direction:column;gap:8px">
-      <span>テスト:れんしゅうを始める点数</span>
+      <span>テスト:れんしゅうを始めるコンボ数</span>
       <select id="testScore" style="font:inherit;font-size:17px;padding:8px;border-radius:8px;width:100%">
-        <option value="0">0点(ふつう)</option>
-        <option value="49000">4万9千(もうすぐ鳥)</option>
-        <option value="99000">9万9千(もうすぐスロー)</option>
-        <option value="149000">14万9千(もうすぐスピードアップ)</option>
-        <option value="299000">29万9千(もうすぐゆれ幅チェンジ)</option>
-        <option value="499000">49万9千(もうすぐ強風)</option>
-        <option value="600000">60万(ぜんぶ入り)</option>
+        <option value="0">0コンボ(ふつう)</option>
+        <option value="48">48コンボ(もうすぐ鳥)</option>
+        <option value="98">98コンボ(もうすぐスロー)</option>
+        <option value="148">148コンボ(もうすぐスピードアップ)</option>
+        <option value="298">298コンボ(もうすぐゆれ幅チェンジ)</option>
+        <option value="498">498コンボ(もうすぐ強風)</option>
+        <option value="600">600コンボ(ぜんぶ入り)</option>
       </select>
     </label>
     <div class="row">
@@ -223,11 +223,11 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <li><b>音</b>:ゆれに合わせて「キュイーン」と音がだんだん高くなります。<b>いちばん高くなって「キン!」と鳴った瞬間</b>に手をはなします。そのあと音は下がって、次のゆれでまた上がります(ブランコ1往復で音も1周)。</li>
       <li><b>絵</b>:上のランプが 1・2・3 と光り、4つ目の「今」が光ったらはなします。手のまわりの輪がちぢんで、まん中の輪にぴったり重なった時も「今」です。「せってい」で下のタイミングバーを出すこともできます(針がまん中の線に来た時が「今」。点数は ×0.8)。</li>
       <li>はなさずに待つと、次のゆれでまた合図が鳴ります(4回まで)。</li>
-      <li><b>スピードアップ</b>:スコアが15万点をこえると「タタタタン!」と鳴って、ブランコがさらに速くなっていきます。</li>
-      <li><b>ゆれ幅チェンジ</b>:30万点をこえると、ブランコごとにゆれの大きさがバラバラになります(「ここ」の位置が毎回かわります)。合図の音も、ブランコごとにいちばん高くなる高さがかわります。リズム(タイミング)は今までどおりなので、ランプと音のリズムをたよりに!</li>
-      <li><b>強風</b>:50万点をこえると、ときどき、飛んでいるあいだに風がふきます。<b>追い風</b>(風の線が左から右へ、音は「ヒュオーッ」と上がっていく)なら、つぎのブランコをつかんだ直後にゆれが速くなります。<b>向かい風</b>(右から左へ、音は「ゴォーッ」と下がっていく)なら遅くなります。風の向きを聞いて・見て、先に読もう!合図の音と光は、そこから新しい速さで続きます。</li>
-      <li><b>スロー</b>:スコアが10万点をこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
-      <li><b>鳥</b>:スコアが5万点をこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
+      <li><b>スピードアップ</b>:150コンボをこえると「タタタタン!」と鳴って、ブランコがさらに速くなっていきます。</li>
+      <li><b>ゆれ幅チェンジ</b>:300コンボをこえると、ブランコごとにゆれの大きさがバラバラになります(「ここ」の位置が毎回かわります)。合図の音も、ブランコごとにいちばん高くなる高さがかわります。リズム(タイミング)は今までどおりなので、ランプと音のリズムをたよりに!</li>
+      <li><b>強風</b>:500コンボをこえると、ときどき、飛んでいるあいだに風がふきます。<b>追い風</b>(風の線が左から右へ、音は「ヒュオーッ」と上がっていく)なら、つぎのブランコをつかんだ直後にゆれが速くなります。<b>向かい風</b>(右から左へ、音は「ゴォーッ」と下がっていく)なら遅くなります。風の向きを聞いて・見て、先に読もう!合図の音と光は、そこから新しい速さで続きます。</li>
+      <li><b>スロー</b>:100コンボをこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
+      <li><b>鳥</b>:50コンボをこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
     </ol></div>
     <div class="panel">
@@ -415,7 +415,7 @@ function noiseHit(at, dur, freq, vol) {
 const SFX = {
   // 合図:ゆれ1回で1周する「キュイーン」。後ろの端から音が高くなっていき、
   // いちばん高いところ(=はなす瞬間)で「キン!」。そのあと下がって、次のゆれでまた上がる
-  cycle(start, target, end, pitch = 1) {   // pitch:いちばん高いところの高さ(30万点からブランコごとに変わる)
+  cycle(start, target, end, pitch = 1) {   // pitch:いちばん高いところの高さ(300コンボからブランコごとに変わる)
     if (!ac) return [];
     const out = [], st = Math.max(ac.currentTime, start);
     // とちゅうから鳴らすとき(強風で速さが変わったとき)は、その時点の高さ・大きさから始める
@@ -705,12 +705,13 @@ const WIN = {
 };
 // つぎのブランコの速さ(1往復の秒数)。だんだん速くなって 1.0 秒まで。
 // 15回目からはブランコごとに速さを少しずつ変えて(最大±15%)、同じリズムで押し続けられないようにする
-// 15万点をこえると、さらに速くなる(1.0秒 → 0.72秒まで。35万点でいちばん速い)
-const FAST_SCORE = 150000;
-function nextPeriod(catches, score) {
+// 150コンボから、さらに速くなる(1.0秒 → 0.72秒まで。350コンボでいちばん速い)
+// じゃまは「コンボ数」で始まる(ノールックではスコアが見えず、クリティカルのときに読み上げるコンボ数だけがわかるので)
+const FAST_COMBO = 150;
+function nextPeriod(catches, combo) {
   let base = Math.max(1.0, 2.4 * Math.pow(0.97, catches));
   let min = 0.9;
-  if (score >= FAST_SCORE) { base = Math.min(base, 1.0 - 0.28 * Math.min(1, (score - FAST_SCORE) / 200000)); min = 0.65; }
+  if (combo >= FAST_COMBO) { base = Math.min(base, 1.0 - 0.28 * Math.min(1, (combo - FAST_COMBO) / 200)); min = 0.65; }   // 150コンボから速くなり、350コンボでいちばん速い
   const amp = 0.15 * Math.min(1, Math.max(0, (catches - 15) / 15));
   return Math.max(min, base * (1 + (Math.random() * 2 - 1) * amp));
 }
@@ -822,9 +823,9 @@ function cancelBeats() {
 }
 
 /* ---------- スローと鳥 ---------- */
-const SLOW_SCORE = 100000;   // この点数をこえると、ときどきスローになる
+const SLOW_COMBO = 100;   // このコンボ数から、ときどきスローになる
 const SLOW_MUL = 1.6;        // スローのときのゆれの遅さ(1往復の時間が1.6倍)
-const BIRD_SCORE = 50000;    // この点数をこえると、ときどき鳥が来る
+const BIRD_COMBO = 50;    // このコンボ数から、ときどき鳥が来る
 // 鳴き声のパターン:[始まりのずれ(秒), 長さ, 始まりの高さ, まん中, 終わり](Hz)
 const BIRD_SONGS = [
   [[0, 0.07, 3200, 5200, 3800], [0.09, 0.07, 3200, 5200, 3800]],                                   // ピチュ・ピチュ
@@ -832,8 +833,8 @@ const BIRD_SONGS = [
   [[0, 0.12, 2600, 4400, 5000], [0.16, 0.06, 4800, 3600, 4300]],                                   // ヒーッ・チュッ
 ];
 const BIRD_SONG_LEN = 0.3;   // いちばん長い鳴き声の長さ(秒)        // 15回つかまったあと(75m)から、ときどき鳥が来る
-const WOBBLE_SCORE = 300000;   // ゆれ幅チェンジ
-const WIND_SCORE = 500000;     // 強風
+const WOBBLE_COMBO = 300;   // ゆれ幅チェンジ
+const WIND_COMBO = 500;     // 強風
 // 強風:同じブランコのゆれの途中(いちばん後ろに来たとき)で、速さが変わる
 // 強風:前のブランコから飛んでいるあいだに「ビュオーッ」と知らせて、
 // つかんだあと、音が上がっていくとちゅう(ゆれの 0.2)で速さが変わる。ゆれの位置はつながったまま、そこから新しい速さになる
@@ -851,16 +852,16 @@ function updateWind(now) {
   G.wind = null;
 }
 function onGrabEvents(now) {
-  // 30万点:ゆれ幅チェンジのお知らせ(最初の1回)
-  if (!G.wobbleOn && G.score >= WOBBLE_SCORE) {
+  // 300コンボ:ゆれ幅チェンジのお知らせ(最初の1回)
+  if (!G.wobbleOn && G.combo >= WOBBLE_COMBO) {
     G.wobbleOn = true; SFX.wobble(); vibrate([40, 40, 40]); say('ゆれ幅チェンジ'); G.banner = { text: 'ゆれ幅チェンジ!', t: now };
   }
-  // 50万点:強風のお知らせ(最初の1回)と、ときどき強風
-  if (!G.windOn && G.score >= WIND_SCORE) {
+  // 500コンボ:強風のお知らせ(最初の1回)
+  if (!G.windOn && G.combo >= WIND_COMBO) {
     G.windOn = true; say('強風注意'); G.banner = { text: '強風注意!', t: now };
   }
-  // 15万点をこえた瞬間に「スピードアップ!」を音・声・絵で知らせる
-  if (!G.fastOn && G.score >= FAST_SCORE) {
+  // 150コンボになった瞬間に「スピードアップ!」を音・声・絵で知らせる
+  if (!G.fastOn && G.combo >= FAST_COMBO) {
     G.fastOn = true; G.noSlow = 3; SFX.speedup(); vibrate([30, 30, 30, 30, 60]); say('スピードアップ');
     G.banner = { text: 'スピードアップ!', t: now };
   }
@@ -870,13 +871,13 @@ function onGrabEvents(now) {
     if (G.slowLeft > 0) G.period = Math.min(2.6, G.period * SLOW_MUL);
     else { SFX.pi(); vibrate(40); G.banner = { text: 'もとの速さ', t: now }; }
   } else if (G.noSlow > 0) { G.noSlow--;   // スピードアップの直後は、しばらくスローにしない
-  } else if (G.score >= SLOW_SCORE && Math.random() < 0.12) {   // スローはたまに(出すぎると、ほとんどスローになってしまう)
+  } else if (G.combo >= SLOW_COMBO && Math.random() < 0.12) {   // スローはたまに(出すぎると、ほとんどスローになってしまう)
     G.slowLeft = 2 + Math.floor(Math.random() * 3);   // 2〜4本のブランコのあいだ
     G.period = Math.min(2.6, G.period * SLOW_MUL);
     SFX.kachi(); vibrate([20, 60, 20]); G.banner = { text: 'スロー', t: now };
   }
   // 鳥:画面の上を横切りながら鳴いて、ランプにもかぶる(音でも絵でもじゃまする)
-  if (!G.bird && G.score >= BIRD_SCORE && Math.random() < 0.25) spawnBird(now);
+  if (!G.bird && G.combo >= BIRD_COMBO && Math.random() < 0.25) spawnBird(now);
 }
 function spawnBird(now) {
   const dur = 2600 + Math.random() * 1400, start = now + 300 + Math.random() * 900, dir = Math.random() < 0.5 ? 1 : -1;
@@ -930,13 +931,13 @@ function release() {
   if (kind === 'miss') startFall(from, th, err < 0 ? 'early' : 'late');
   else {
     const j = G.i + (kind === 'crit' ? 2 : 1);
-    // 30万点から、つぎのブランコのゆれ幅がバラバラになる
-    const amp = G.score >= WOBBLE_SCORE ? 0.62 + Math.random() * 0.5 : W.A;
+    // 300コンボから、つぎのブランコのゆれ幅がバラバラになる
+    const amp = G.combo >= WOBBLE_COMBO ? 0.62 + Math.random() * 0.5 : W.A;
     const to = handsOf(j, -amp);
     G.state = 'fly';
     G.fly = { start: now, dur: kind === 'crit' ? 1150 : 780, from, to, h: kind === 'crit' ? 105 : 60, j, kind, th0: th, jth: trap(j).th, amp };
-    // 50万点から、ときどき強風(飛んでいるあいだに知らせる)
-    if (G.score >= WIND_SCORE && Math.random() < 0.45) {
+    // 500コンボから、ときどき強風(飛んでいるあいだに知らせる)
+    if (G.combo >= WIND_COMBO && Math.random() < 0.45) {
       // 追い風(左→右。進む向きと同じ)は速くなる、向かい風(右→左)は遅くなる。
       const tail = Math.random() < 0.5;
       const wd = { factor: tail ? 0.7 : 1.5, dir: tail ? 1 : -1 };
@@ -999,8 +1000,8 @@ function update(now, dt) {
     swingUpdate(2.2 * (1 - Math.abs(s - 0.5) * 1.4), 0);
     if (s >= 1) {
       G.i = F.j; G.catches++; G.state = 'swing'; G.amp = F.amp; G.fly = null;
-      G.pitch = G.score >= WOBBLE_SCORE ? 0.7 + Math.random() * 0.65 : 1;   // 30万点から、合図の高さもブランコごとに変わる
-      G.period = nextPeriod(G.catches, G.score);
+      G.pitch = G.combo >= WOBBLE_COMBO ? 0.7 + Math.random() * 0.65 : 1;   // 300コンボから、合図の高さもブランコごとに変わる
+      G.period = nextPeriod(G.catches, G.combo);
       onGrabEvents(now);
       restartSwing(now);
       G.wind = F.wind || null;   // restartSwing のあとに入れる(restartSwing は強風を取り消すので)
@@ -1682,9 +1683,9 @@ const TEST_MODE = /[?&]test\b/.test(location.search);
 if (TEST_MODE) $('testBox').classList.remove('hidden');
 $('practiceBtn').addEventListener('click', () => {
   newGame(true);
-  const sc = TEST_MODE ? Number($('testScore').value) : 0;
-  // テスト:点数を先に入れておく。速さ・判定の幅も後半と同じにするため、つかまった回数も60回にする
-  if (sc > 0) { G.score = sc; G.catches = 60; updateHud(); }
+  const cb = TEST_MODE ? Number($('testScore').value) : 0;
+  // テスト:コンボ数を先に入れておく。速さ・判定の幅も後半と同じにするため、つかまった回数も60回にする
+  if (cb > 0) { G.combo = cb; G.maxCombo = cb; G.catches = 60; G.score = cb * 1000; updateHud(); }
 });
 $('toRanking').addEventListener('click', () => openRanking('title'));
 $('toHowto').addEventListener('click', () => show('howto', 'title'));
