@@ -773,6 +773,19 @@ const JUDGE = {
 let G = null, raf = 0;
 const cv = $('cv'), ctx = cv.getContext('2d');
 let view = { w: 0, h: 0, s: 1, dpr: 1 };
+// 重い絵(画面全体のグラデーション)は、大きさや色が変わったときに1回だけ描いて使い回す(スマホでカクつかないように)
+const layerCache = {};
+function cachedLayer(name, paint) {
+  const key = [view.w, view.h, view.dpr, view.oy, C.bg1, C.bg2, C.floor, C.hc].join('|');
+  let L = layerCache[name];
+  if (!L || L.key !== key) {
+    const c = L ? L.c : document.createElement('canvas');
+    c.width = Math.max(1, Math.round(view.w * view.dpr)); c.height = Math.max(1, Math.round(view.h * view.dpr));
+    const x = c.getContext('2d'); x.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); paint(x, view.w, view.h);
+    L = layerCache[name] = { c, key };
+  }
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(L.c, 0, 0); ctx.restore();
+}
 function resize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const r = $('stage').getBoundingClientRect();
@@ -1187,11 +1200,21 @@ function drawCover() {
     // いらすとやの手のひらを横向き(指が右)にして、画面いっぱいに
     ctx.fillStyle = '#4a3b2f'; ctx.fillRect(0, 0, w, h);
     const iw = HAND_IMG.naturalWidth, ih = HAND_IMG.naturalHeight;   // 横向きにすると、横 ih・たて iw になる
-    const k = Math.min(w * 1.35 / ih, h * 0.92 / iw) * (calm ? 1 : 1 + Math.sin(t * 0.43) * 0.015);   // 手の形がわかる大きさ(縦画面では指先が少しはみ出す)
-    const bobX = calm ? 0 : Math.sin(t * 0.37) * 0.015 * w, bobY = calm ? 0 : Math.sin(t * 0.23 + 1) * 0.012 * h, tilt = calm ? 0 : Math.sin(t * 0.29 + 2) * 0.03;
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.translate(w * 0.47 + bobX, h * 0.54 + bobY); ctx.rotate(Math.PI / 2 + tilt);
-    ctx.drawImage(HAND_IMG, -iw * k / 2, -ih * k / 2, iw * k, ih * k);
+    const k = Math.min(w * 1.35 / ih, h * 0.92 / iw);   // 手の形がわかる大きさ(縦画面では指先が少しはみ出す)
+    // 拡大と横向きは1回だけ(毎コマ大きな画像を拡大するとスマホで重いので)。毎コマは少し動かすだけ
+    const ck = Math.round(k * 100) + '|' + view.dpr;
+    if (!HAND_IMG._c || HAND_IMG._ck !== ck) {
+      const c = HAND_IMG._c || document.createElement('canvas'), d = view.dpr;
+      c.width = Math.ceil(ih * k * d); c.height = Math.ceil(iw * k * d);
+      const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.setTransform(d, 0, 0, d, 0, 0); x.translate(ih * k / 2, iw * k / 2); x.rotate(Math.PI / 2);
+      x.drawImage(HAND_IMG, -iw * k / 2, -ih * k / 2, iw * k, ih * k);
+      HAND_IMG._c = c; HAND_IMG._ck = ck;
+    }
+    // ゆっくり上下左右に動かす(かたむけると毎コマ画像を描き直すことになり重いので、動かすだけ)
+    const bobX = calm ? 0 : Math.sin(t * 0.37) * 0.015 * w, bobY = calm ? 0 : Math.sin(t * 0.23 + 1) * 0.012 * h;
+    ctx.translate(Math.round((w * 0.47 + bobX) * view.dpr) / view.dpr, Math.round((h * 0.54 + bobY) * view.dpr) / view.dpr);
+    ctx.drawImage(HAND_IMG._c, -ih * k / 2, -iw * k / 2, ih * k, iw * k);
     ctx.restore(); ctx.save();
     bigText('見ちゃダメ!', '#f6f2e7', Math.max(h * 0.08, 56), 30);
   } else if (G.cover === 'hand') {
@@ -1235,10 +1258,12 @@ function draw(now) {
     return;
   }   // ノールック:ゲームの絵は描かず、手のひらか鳥で画面をふさぐ
   // 空(サーカスの夜)
-  const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, C.bg1); g.addColorStop(1, C.bg2);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-  // 縦長の画面では、下の余白をネットの下の床っぽく
-  if (view.oy > 0) { ctx.fillStyle = C.floor; ctx.fillRect(0, view.oy + W.H * s, w, h); }
+  cachedLayer('sky', (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, C.bg1); g.addColorStop(1, C.bg2);
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // 縦長の画面では、下の余白をネットの下の床っぽく
+    if (view.oy > 0) { x.fillStyle = C.floor; x.fillRect(0, view.oy + W.H * view.s, w, h); }
+  });
   // 星とテントのしま模様(ハイコントラストでは描かない)
   if (!C.hc) {
   ctx.fillStyle = 'rgba(255,255,240,.55)';
@@ -1314,7 +1339,7 @@ function draw(now) {
 function drawSlow(now) {
   const { w, h } = view;
   ctx.save();
-  if (!C.hc) { const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75); g.addColorStop(0, 'rgba(86,180,233,0)'); g.addColorStop(1, 'rgba(86,180,233,.28)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); }
+  if (!C.hc) cachedLayer('slow', (x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75); g.addColorStop(0, 'rgba(86,180,233,0)'); g.addColorStop(1, 'rgba(86,180,233,.28)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
   else { ctx.strokeStyle = C.crit; ctx.lineWidth = 8; ctx.setLineDash([18, 10]); ctx.strokeRect(4, 4, w - 8, h - 8); ctx.setLineDash([]); }
   const x = 34, y = 150;
   ctx.strokeStyle = C.hc ? C.text : '#56B4E9'; ctx.fillStyle = C.hc ? C.text : '#56B4E9'; ctx.lineWidth = 3;
