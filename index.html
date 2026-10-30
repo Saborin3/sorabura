@@ -379,6 +379,29 @@ function vibrate(ms) { if (settings.vib && navigator.vibrate) { try { navigator.
    音(Web Audio)— 合図の音はオーディオの時計で予約するので、画面がカクついてもずれない
    ========================================================= */
 let ac = null, master = null, noiseBuf = null, swing = null;
+/* スマホで「読み上げは聞こえるのに効果音が鳴らない」のを防ぐ
+   1. iPhone はマナーモード(消音スイッチ)だと効果音(Web Audio)だけ消える。読み上げは消えない。
+      → 無音の <audio> をタップのときに流しておくと「音楽の再生」あつかいになって、マナーモードでも鳴る
+   2. 電話・通知・ほかのアプリ・画面ロックのあと、効果音が「interrupted(中断)」のまま止まることがある
+      → 止まっていたら、画面にさわるたびに再開する(suspended だけでなく interrupted も)
+   3. 最初のタップで、無音の音を1回鳴らして「音を出していい」状態にする(古い iPhone 向け) */
+let silentEl = null, audioUnlocked = false;
+function silentWavUrl() {
+  const n = 800, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+function keepPlaybackSession() {
+  try {
+    if (!silentEl) {
+      silentEl = document.createElement('audio');
+      silentEl.setAttribute('x-webkit-airplay', 'deny'); silentEl.preload = 'auto'; silentEl.loop = true; silentEl.src = silentWavUrl();
+    }
+    if (silentEl.paused) { const p = silentEl.play(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
 function audioInit() {
   if (!ac) {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
@@ -387,7 +410,28 @@ function audioInit() {
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  if (ac.state === 'suspended') ac.resume();
+  keepPlaybackSession();
+  if (ac.state !== 'running') { try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  if (!audioUnlocked) {   // 無音を1回鳴らす
+    try { const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0); audioUnlocked = true; } catch (e) {}
+  }
+}
+// 画面のどこをさわっても、止まっていた効果音を再開する(タイトル画面や結果画面でも)
+['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ac) audioInit(); }, { capture: true, passive: true }));
+// 効果音が止まったままゲームが始まったら、声(読み上げは動いているので)と画面で知らせる
+let audioWarned = -Infinity;
+function checkAudio() {
+  if (!ac || !G || G.paused || G.mode === 'silent' || ac.state === 'running') return;
+  const now = performance.now(); if (now - audioWarned < 6000) return;
+  audioWarned = now;
+  say('効果音が止まっています。画面をタップしてください', true);
+}
+// 効果音が止まっているあいだは、画面にずっと知らせを出しておく
+function audioStopped() { return !!(ac && G && G.mode !== 'silent' && ac.state !== 'running' && performance.now() - G.startAt > 1200); }
+function drawAudioWarn() {
+  if (!audioStopped()) return;
+  bigText('🔇 音が止まっています', '#ffe14d', Math.max(view.h * 0.42, 236), 26);
+  bigText('画面をタップしてください', '#ffe14d', Math.max(view.h * 0.42, 236) + 34, 22);
 }
 // performance.now() の時刻(ミリ秒)→ オーディオの時刻(秒)。出力の遅れの分だけ早めに鳴らす
 function aTime(ms) { return ac.currentTime + (ms - performance.now()) / 1000 - (ac.outputLatency || 0); }
@@ -1185,7 +1229,11 @@ function drawCover() {
 function draw(now) {
   const { w, h, s, dpr } = view;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (G.mode === 'nolook') { drawCover(now); return; }   // ノールック:ゲームの絵は描かず、手のひらか鳥で画面をふさぐ
+  if (G.mode === 'nolook') {
+    drawCover(now);
+    drawAudioWarn();   // 「音が止まっています」の知らせだけは、ふたの上にも出す(タイミングとは関係ない)
+    return;
+  }   // ノールック:ゲームの絵は描かず、手のひらか鳥で画面をふさぐ
   // 空(サーカスの夜)
   const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, C.bg1); g.addColorStop(1, C.bg2);
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -1259,7 +1307,7 @@ function draw(now) {
     else ctx.fillText('音がいちばん高い「キン!」・「今」が光ったら はなす', w / 2, 142);
   }
   drawBird(now);   // 鳥はランプや説明の文字より手前(判定やお知らせの文字だけ、さらに手前)
-  drawBanner(now); drawPop(now);
+  drawBanner(now); drawPop(now); drawAudioWarn();
   if (G.state === 'swing' && now < G.t0 && !G.prev) bigText(G.catches === 0 && !G.lastMiss ? 'よーい…' : 'もう一回', C.text, Math.max(h * 0.42, 236), 34);
 }
 // スロー中:画面のふちを青く、左上に時計マークと「スロー」
@@ -1444,6 +1492,7 @@ function loop() {
   if (!G) return;
   const now = gnow(), dt = Math.min(0.05, (now - G.lastT) / 1000); G.lastT = now;
   if (!G.paused && !G.over) update(now, dt);
+  if (performance.now() - G.startAt > 1200) checkAudio();   // 始まって少したっても効果音が止まっていたら知らせる
   draw(now);
   raf = requestAnimationFrame(loop);
 }
@@ -1496,7 +1545,10 @@ $('pauseBtn').addEventListener('click', e => { e.stopPropagation(); pause(); });
 $('pauseBtn').addEventListener('pointerdown', e => e.stopPropagation());
 $('resumeBtn').addEventListener('click', resume);
 $('quitBtn').addEventListener('click', () => { endGame(); show('title'); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { pause(); try { if (silentEl) silentEl.pause(); } catch (e) {} }   // 見ていないときは無音の再生も止める
+  else if (ac) audioInit();
+});
 
 function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); cancelBird(); cancelWind(); } swingStop(); G = null; if (master) master.gain.value = settings.vol; $('game').classList.remove('nolook'); }
 
