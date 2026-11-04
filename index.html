@@ -387,7 +387,7 @@ let ac = null, master = null, noiseBuf = null, swing = null;
    3. 最初のタップで、無音の音を1回鳴らして「音を出していい」状態にする(古い iPhone 向け) */
 let silentEl = null, audioUnlocked = false;
 function silentWavUrl() {
-  const n = 800, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const n = 16000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);   // 2秒(短いとくり返しが多くて、スマホが重くなる)
   const w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
   w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
   v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
@@ -417,7 +417,25 @@ function audioInit() {
   }
 }
 // 画面のどこをさわっても、止まっていた効果音を再開する(タイトル画面や結果画面でも)
-['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ac) audioInit(); }, { capture: true, passive: true }));
+['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ac) audioInit(); else warmUp(); }, { capture: true, passive: true }));
+// はじめて画面にさわったとき(タイトル画面で)に、効果音・声・絵の準備を先にすませておく。
+// スマホは、はじめて使う機能の準備をその場でするので、ゲームの最初だけカクつくのを防ぐ
+let warmed = false;
+function warmUp() {
+  if (warmed) return; warmed = true;
+  audioInit();
+  // 声:音量0で一度話して、声のデータを読みこませておく
+  try { if ('speechSynthesis' in window) { speechSynthesis.getVoices(); const u = new SpeechSynthesisUtterance('。'); u.lang = 'ja-JP'; u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
+  // 効果音:合図の音を音量0で1回作っておく
+  try { const g = master.gain.value; master.gain.value = 0; SFX.cycle(ac.currentTime + 0.01, ac.currentTime + 0.05, ac.currentTime + 0.1); setTimeout(() => { if (!G) master.gain.value = settings.vol; }, 200); } catch (e) {}
+}
+// 絵:使い回しの絵を、ゲームの最初の1コマより前に作っておく
+function warmDraw() {
+  try {
+    cachedLayer('sky', (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, C.bg1); g.addColorStop(1, C.bg2); x.fillStyle = g; x.fillRect(0, 0, w, h); if (view.oy > 0) { x.fillStyle = C.floor; x.fillRect(0, view.oy + W.H * view.s, w, h); } });
+    if (!C.hc) cachedLayer('slow', (x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75); g.addColorStop(0, 'rgba(86,180,233,0)'); g.addColorStop(1, 'rgba(86,180,233,.28)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
+  } catch (e) {}
+}
 // 効果音が止まったままゲームが始まったら、声(読み上げは動いているので)と画面で知らせる
 let audioWarned = -Infinity;
 function checkAudio() {
@@ -840,6 +858,7 @@ function newGame(practice) {
   audioInit();
   show('game');
   resize();
+  warmDraw();
   const now = performance.now();
   G = {
     cover: Math.random() < 0.5 ? 'hand' : 'bluebird', coverSeed: Math.random() * 1000,   // ノールックのふた(手のひらか青い鳥)
