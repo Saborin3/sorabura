@@ -417,7 +417,7 @@ function audioInit() {
   }
 }
 // 画面のどこをさわっても、止まっていた効果音を再開する(タイトル画面や結果画面でも)
-['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ac) audioInit(); else warmUp(); }, { capture: true, passive: true }));
+['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (warmed) audioInit(); else warmUp(); }, { capture: true, passive: true }));
 // はじめて画面にさわったとき(タイトル画面で)に、効果音・声・絵の準備を先にすませておく。
 // スマホは、はじめて使う機能の準備をその場でするので、ゲームの最初だけカクつくのを防ぐ
 let warmed = false;
@@ -427,7 +427,10 @@ function warmUp() {
   // 声:音量0で一度話して、声のデータを読みこませておく
   try { if ('speechSynthesis' in window) { speechSynthesis.getVoices(); const u = new SpeechSynthesisUtterance('。'); u.lang = 'ja-JP'; u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
   // 効果音:合図の音を音量0で1回作っておく
-  try { const g = master.gain.value; master.gain.value = 0; SFX.cycle(ac.currentTime + 0.01, ac.currentTime + 0.05, ac.currentTime + 0.1); setTimeout(() => { if (!G) master.gain.value = settings.vol; }, 200); } catch (e) {}
+  // (全体の音量を0にすると、すぐ「はじめる」を押したときに音もれしたり、設定の試し音が消えたりするので、音量0の別の出口に流す)
+  const real = master;
+  try { const mute = ac.createGain(); mute.gain.value = 0; mute.connect(ac.destination); master = mute; SFX.cycle(ac.currentTime + 0.01, ac.currentTime + 0.05, ac.currentTime + 0.1); setTimeout(() => { try { mute.disconnect(); } catch (e) {} }, 400); } catch (e) {}
+  master = real;
 }
 // 絵:使い回しの絵を、ゲームの最初の1コマより前に作っておく
 function warmDraw() {
@@ -1591,7 +1594,11 @@ $('resumeBtn').addEventListener('click', resume);
 $('quitBtn').addEventListener('click', () => { endGame(); show('title'); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { pause(); try { if (silentEl) silentEl.pause(); } catch (e) {} }   // 見ていないときは無音の再生も止める
-  else if (ac) audioInit();
+  else {
+    // ほかのアプリからもどったら、声と音の準備をもう一度する(iPhoneは裏にいるあいだに声や音のしくみを止めるので、最初の1回がまた重くなる)
+    warmed = false;
+    if (ac) audioInit();
+  }
 });
 
 function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); cancelBird(); cancelWind(); } swingStop(); G = null; if (master) master.gain.value = settings.vol; $('game').classList.remove('nolook'); }
