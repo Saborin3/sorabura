@@ -196,6 +196,7 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
     <button class="btn ghost" id="toSettings">せってい</button>
     <p class="note">音と絵の両方で「はなすタイミング」がわかります。<br>スペースキー・Enter・画面タップで手をはなします。<br>スマホは縦向きがおすすめ。</p>
     <p class="note vo-note">VoiceOverをお使いの方は、「はじめる」を押してからVoiceOverをお切りください。</p>
+    <p class="note">iPhoneで効果音が鳴らないときは、マナーモード(消音)をオフにしてください。</p>
   </div>
 </section>
 
@@ -367,6 +368,7 @@ function say(text, important) {
     try {
       if (ss.paused) ss.resume();
       const u = make(); let started = false; u.onstart = () => { started = true; };
+      u.onend = u.onerror = () => setTimeout(reviveAudio, 30);   // iPhoneは読み上げで無音の再生が止められるので、終わったらすぐ戻す
       ss.speak(u);
       if (important) setTimeout(() => { if (!started && !ss.speaking) { try { ss.cancel(); ss.speak(make()); } catch (e) {} } }, 1500);
     } catch (e) {}
@@ -398,15 +400,33 @@ function keepPlaybackSession() {
     if (!silentEl) {
       silentEl = document.createElement('audio');
       silentEl.setAttribute('x-webkit-airplay', 'deny'); silentEl.preload = 'auto'; silentEl.loop = true; silentEl.src = silentWavUrl();
+      // iPhoneは読み上げ(声)を始めると、ほかの再生を勝手に止める。止められたら、すぐ流し直す
+      silentEl.addEventListener('pause', () => { if (!document.hidden) setTimeout(reviveAudio, 60); });
     }
     if (silentEl.paused) { const p = silentEl.play(); if (p && p.catch) p.catch(() => {}); }
   } catch (e) {}
+}
+// 止められた音をたて直す(タップがなくても、できる範囲で)。何回も呼ばれても重くならないように間をあける
+let reviveAt = 0;
+function reviveAudio() {
+  if (!ac || document.hidden) return;
+  const now = performance.now(); if (now - reviveAt < 250) return; reviveAt = now;
+  // iPhoneは読み上げのあと、音の種類が「マナーモードで消える音」にもどされることがあるので、毎回「音楽の再生」に戻す
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+  keepPlaybackSession();
+  if (ac.state !== 'running') { try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
 function audioInit() {
   if (!ac) {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
-    ac = new AC(); master = ac.createGain(); master.gain.value = settings.vol; master.connect(ac.destination);
+    ac = new AC();
+    ac.onstatechange = () => {
+      if (ac.state !== 'running') { if (!document.hidden) setTimeout(reviveAudio, 100); return; }   // 中断されたら、さわらなくても戻せるときは戻す
+      // 止まっているあいだはオーディオの時計も止まるので、そのあいだに予約した合図は時間がずれる。戻ったら予約しなおす
+      if (G && G.state === 'swing' && !G.paused) cancelBeats();
+    };
+    master = ac.createGain(); master.gain.value = settings.vol; master.connect(ac.destination);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
@@ -442,6 +462,7 @@ function warmDraw() {
 // 効果音が止まったままゲームが始まったら、声(読み上げは動いているので)と画面で知らせる
 let audioWarned = -Infinity;
 function checkAudio() {
+  if (ac && !document.hidden && ((silentEl && silentEl.paused) || ac.state !== 'running')) reviveAudio();
   if (!ac || !G || G.paused || G.mode === 'silent' || ac.state === 'running') return;
   const now = performance.now(); if (now - audioWarned < 6000) return;
   audioWarned = now;
@@ -886,7 +907,7 @@ function newGame(practice) {
 
 /* ---------- 合図(音)の予約 ---------- */
 function scheduleBeats() {
-  if (!ac || G.state !== 'swing' || G.paused) return;
+  if (!ac || ac.state !== 'running' || G.state !== 'swing' || G.paused) return;   // 音が止まっているあいだは予約しない(時計がずれるので)
   const now = gnow();
   for (let k = 0; k < MAX_CYCLES; k++) {
     const st = G.t0 + periodMs() * k, tt = st + periodMs() * TARGET_PHASE, en = st + periodMs(), key = 'c' + G.epoch + '_' + k;
