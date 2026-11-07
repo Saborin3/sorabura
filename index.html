@@ -33,6 +33,10 @@ p{margin:0;line-height:1.7}
 .btn.ghost{background:var(--panel2);color:var(--ink);box-shadow:0 4px 0 #0b1726;border:2px solid var(--line)}
 .btn.small{min-height:44px;font-size:16px;width:auto}
 a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
+/* ショートカットキーの表示(キーボードのある端末だけ) */
+.kbd{display:inline-block;min-width:1.5em;margin-left:.5em;padding:0 .35em;border:2px solid currentColor;border-radius:6px;font-size:.8em;line-height:1.35;opacity:.8;vertical-align:.08em}
+html.no-keys .kbd{display:none}
+@media (hover:none) and (pointer:coarse){.kbd{display:none}}
 a.btn:focus-visible,.btn:focus-visible,input:focus-visible,.tab:focus-visible{outline:4px solid var(--crit);outline-offset:3px}
 .row{display:flex;gap:10px}.row>*{flex:1}
 .account{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:2px solid var(--line);
@@ -158,6 +162,15 @@ html.hc-dark .lamp.on{background:#ff0;color:#000;border-color:#ff0}
 html.hc-dark .vo-note{border-top-color:#fff}
 html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark .tab:focus-visible{outline:4px solid #0ff}
 @media (prefers-reduced-motion:reduce){.btn:active,#releaseBtn:active{transform:none}}
+/* 体験イベント(?event)ののこり時間 */
+#evBadge{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:50;pointer-events:none;
+  background:rgba(13,27,42,.9);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:6px 12px;font-size:16px;font-variant-numeric:tabular-nums}
+#evBadge b{font-size:24px;margin-left:4px}
+#evBadge.warn{border:3px solid var(--crit);color:var(--crit)}
+#evBadge.hidden{display:none}
+html.hc-dark #evBadge{background:#000;color:#fff;border-color:#fff}
+html.hc-dark #evBadge.warn{color:#ff0;border:4px solid #ff0}
+@media (forced-colors:active){#evBadge{border-color:CanvasText}#evBadge.warn{border-width:5px}}
 </style>
 </head>
 <body>
@@ -175,6 +188,7 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <label><input type="radio" name="mode" value="nolook"><span><b>ノールック</b><small>音だけ</small></span></label>
       <label><input type="radio" name="mode" value="silent"><span><b>サイレント</b><small>絵だけ</small></span></label>
     </fieldset>
+    <p class="next-goal hidden" id="evNote"></p>
     <button class="btn" id="startBtn">はじめる</button>
     <button class="btn ghost" id="practiceBtn">れんしゅう(ミスしてもOK)</button>
     <!-- テスト用(URLの最後に ?test をつけたときだけ出る)。れんしゅうなのでランキングには入らない -->
@@ -232,6 +246,7 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <li><b>スロー</b>:100コンボをこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:50コンボをこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
+      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では R でもう一回、P でれんしゅう、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、Esc でもどる。一時停止中は H でタイトルへ。せっていでオフにできます。</li>
     </ol></div>
     <div class="panel">
       <p><b>モード</b>(タイトル画面でえらべます)</p>
@@ -267,6 +282,7 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
       <label class="set"><span>下のタイミングバーを表示<br><small class="note">オンにすると点数 ×0.8(れんしゅうは そのまま)</small></span><input type="checkbox" id="sBar"></label>
       <label class="set">動きを減らす(回転・ゆれなし)<input type="checkbox" id="sCalm"></label>
       <label class="set"><span>ハイコントラストのときは暗い画面にする<br><small class="note">まぶしさが苦手な人向け。オフにすると Windows の色(白い背景など)に合わせます</small></span><input type="checkbox" id="sHcDark"></label>
+      <label class="set"><span>ショートカットキー(R でもう一回 など)<br><small class="note">画面読み上げソフトのキーとぶつかるときはオフに</small></span><input type="checkbox" id="sKeys"></label>
       <label class="set">タイミング補正<input type="range" id="sOff" min="-200" max="200" step="10"><span class="val" id="vOff"></span></label>
     </div>
     <p class="note">Bluetoothイヤホンなどで音が遅れて聞こえるときは、補正を「＋」にしてください。いつも「おそい」と出るなら＋、「はやい」と出るならー。</p>
@@ -312,6 +328,24 @@ html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark 
   </div>
 </section>
 
+<!-- 体験イベント(?event)のおわり -->
+<section id="eventEnd" class="screen hidden" aria-labelledby="evH">
+  <div class="card">
+    <h2 id="evH" tabindex="-1">体験おわり!<span class="sr-only" id="evSr"></span></h2>
+    <p class="taunt" id="evMsg">遊んでくれてありがとう!</p>
+    <div class="big-score" id="evBest">0</div>
+    <p class="next-goal">この体験のベストスコア</p>
+    <div class="stats">
+      <div>ベストきょり<b id="evDist">0m</b></div>
+      <div>あそんだ回数<b id="evRuns">0</b></div>
+    </div>
+    <p class="note">続きはスマホやパソコンで遊べます<br>saborin3.github.io/sorabura</p>
+    <button class="btn ghost" id="evNext">次の人へ(スタッフ用:2秒長押し)</button>
+    <p class="note" id="evNextNote" aria-live="polite"></p>
+  </div>
+</section>
+<div id="evBadge" class="hidden" aria-hidden="true">のこり<b>5:00</b></div>
+
 <!-- 結果 -->
 <section id="result" class="screen hidden" aria-labelledby="resH">
   <div class="card">
@@ -353,7 +387,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('sorabura_' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('sorabura_' + k); } catch (e) {} },
 };
-const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true }, store.get('settings', {}));
+const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true, keys: true }, store.get('settings', {}));
 let account = store.get('account', null);   // {name, token}
 
 /* ---------- 読み上げ ---------- */
@@ -623,13 +657,13 @@ function swingStop() { if (swing) { try { swing.s.stop(); } catch (e) {} swing =
 /* =========================================================
    画面の切りかえ
    ========================================================= */
-const screens = ['title', 'login', 'howto', 'settings', 'ranking', 'game', 'result'];
+const screens = ['title', 'login', 'howto', 'settings', 'ranking', 'game', 'result', 'eventEnd'];
 let current = 'title', backTo = 'title';
 function show(id, from) {
   screens.forEach(s => $(s).classList.toggle('hidden', s !== id));
   if (from) backTo = from;
   current = id;
-  const focusEl = { title: $('startBtn'), login: $('nameIn'), howto: $('howH'), settings: $('setH'), ranking: $('tabSeason'), game: $('stage'), result: $('resH') }[id];
+  const focusEl = { title: $('startBtn'), login: $('nameIn'), howto: $('howH'), settings: $('setH'), ranking: $('tabSeason'), game: $('stage'), result: $('resH'), eventEnd: $('evH') }[id];
   if (focusEl) { if (!focusEl.hasAttribute('tabindex') && /^H\d/.test(focusEl.tagName)) focusEl.setAttribute('tabindex', '-1'); setTimeout(() => focusEl.focus(), 30); }
 }
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => show(backTo === current ? 'title' : backTo)));
@@ -762,6 +796,8 @@ function bindSettings() {
   $('sHcDark').checked = settings.hcDark;
   $('sHcDark').addEventListener('change', e => { settings.hcDark = e.target.checked; save(); updatePalette(); });
   $('sOff').addEventListener('input', e => { settings.offset = +e.target.value; save(); });
+  $('sKeys').checked = settings.keys;
+  $('sKeys').addEventListener('change', e => { settings.keys = e.target.checked; save(); markKeys(); });
 }
 bindSettings();
 
@@ -881,6 +917,8 @@ function bindModes() {
 }
 bindModes();
 function newGame(practice) {
+  if (EVENT && EV.over) { evShowEnd(); return; }   // 体験の時間が終わっていたら、もう始めない
+  evStart();
   guestScore = null;   // 前のゲストのスコアは、つぎのゲームを始めたら登録できなくする
   audioInit();
   show('game');
@@ -1590,6 +1628,56 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ---------- ショートカットキー(ゲームの外と、一時停止中) ----------
+   キーボードの配置や、日本語入力がオンのときでも同じキーで動くように、文字ではなくキーの場所(e.code)で見る */
+const SHORTCUTS = [
+  { code: 'KeyR', key: 'R', btn: 'againBtn', on: ['result'] },                       // もう一回
+  { code: 'KeyP', key: 'P', btn: 'practiceBtn', on: ['title'] },                     // れんしゅう
+  { code: 'KeyH', key: 'H', btn: 'resTitle', on: ['result'], go: () => show('title'), anywhere: true },   // タイトル(ホーム)
+  { code: 'KeyL', key: 'L', btn: ['toRanking', 'resRanking'], go: () => openRanking(current), anywhere: true },
+  { code: 'KeyS', key: 'S', btn: 'toSettings', go: () => show('settings', current), anywhere: true },
+  { code: 'KeyA', key: 'A', btn: 'toHowto', go: () => show('howto', current), anywhere: true },
+];
+const NAV_SCREENS = ['title', 'howto', 'settings', 'ranking', 'result', 'login'];
+// ボタンに、キーの印と aria-keyshortcuts(画面読み上げソフトに伝える)をつける
+function markKeys() {
+  document.documentElement.classList.toggle('no-keys', !settings.keys);
+  const put = (id, key) => {
+    const b = $(id); if (!b) return;
+    if (settings.keys) b.setAttribute('aria-keyshortcuts', key); else b.removeAttribute('aria-keyshortcuts');
+    if (!b.querySelector('.kbd')) { const k = document.createElement('span'); k.className = 'kbd'; k.setAttribute('aria-hidden', 'true'); k.textContent = key; b.appendChild(k); }
+  };
+  SHORTCUTS.forEach(s => [].concat(s.btn).forEach(id => put(id, s.key)));
+  put('quitBtn', 'H');
+  document.querySelectorAll('[data-back]').forEach(b => { if (settings.keys) b.setAttribute('aria-keyshortcuts', 'Escape'); else b.removeAttribute('aria-keyshortcuts'); });
+}
+markKeys();
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.altKey || e.metaKey || e.isComposing || e.repeat) return;
+  const el = document.activeElement, tag = el && el.tagName;
+  // 名前やパスワードを入力しているときは、文字として入力する
+  if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(el.type))) return;
+  // 一時停止中:H でタイトルへ
+  if (current === 'game') {
+    if (settings.keys && G && G.paused && e.code === 'KeyH') { e.preventDefault(); $('quitBtn').click(); }
+    return;
+  }
+  if (!NAV_SCREENS.includes(current)) return;   // 体験イベントの「体験おわり」画面などでは使わない
+  // Esc:もどる(Backspace は、ブラウザによっては前のページにもどってしまうので使わない)
+  if (e.key === 'Escape') { const b = $(current) && $(current).querySelector('[data-back]'); if (b) { e.preventDefault(); b.click(); } return; }
+  if (!settings.keys || current === 'login') return;   // ログイン画面は名前を打つところなので、文字のキーは使わない
+  const sc = SHORTCUTS.find(s => s.code === e.code); if (!sc) return;
+  if (sc.on && sc.on.includes(current)) {
+    const b = $(sc.btn); if (b && !b.disabled && !b.classList.contains('hidden')) { e.preventDefault(); b.click(); }
+    return;
+  }
+  if (sc.anywhere && sc.go) {
+    const target = { KeyH: 'title', KeyL: 'ranking', KeyS: 'settings', KeyA: 'howto' }[e.code];
+    if (target === current) return;
+    e.preventDefault(); sc.go();
+  }
+});
+
 function sayStatus() {
   if (!G) return;
   const t = 'スコア ' + G.score + '、きょり ' + G.i * 5 + 'メートル、' + (G.practice ? 'れんしゅう中' : '一発勝負') + '、コンボ ' + G.combo;
@@ -1694,6 +1782,7 @@ function tauntFor(dist, bestDist, isNewBest, lastMiss) {
 }
 
 async function showResult(r) {
+  if (EVENT) { evRecord(r); if (EV.over) { evShowEnd(); return; } }
   lastPractice = r.practice;
   guestScore = null; $('registerBtn').classList.add('hidden');
   $('rScore').textContent = r.score.toLocaleString(); $('rDist').textContent = r.dist + 'm'; $('rCrit').textContent = r.crit; $('rCombo').textContent = r.combo;
@@ -1717,6 +1806,7 @@ async function showResult(r) {
   local.sort((a, b) => b.score - a.score || b.dist - a.dist); store.set('local', local.slice(0, 20));
   if (!CONFIG.SERVER_URL) { note('この端末のランキングに記録しました'); return; }
   const data = { score: r.score, dist: r.dist, crit: r.crit, combo: r.combo, sec: r.sec, bar: r.bar ? 1 : 0, mode: r.mode || 'normal' };
+  if (EVENT) { note('体験版なので、この端末のランキングに記録しました'); return; }
   if (!account) {
     if (r.dist > 0) {
       guestScore = { data, note };
@@ -1817,6 +1907,94 @@ $('practiceBtn').addEventListener('click', () => {
 $('toRanking').addEventListener('click', () => openRanking('title'));
 $('toHowto').addEventListener('click', () => show('howto', 'title'));
 $('toSettings').addEventListener('click', () => show('settings', 'title'));
+/* =========================================================
+   体験イベント用(URLの最後に ?event をつける。?event=3 なら3分)
+   ・「はじめる」(または「れんしゅう」)を最初に押したときから時間を数える
+   ・「もう一回」・タイトルにもどる・一時停止・ページの再読みこみでは、時間はもどらない
+   ・時間になったら、ゲームの途中でも止めて「体験おわり」画面へ
+   ・次の人へは、スタッフが「次の人へ」を2秒長押し
+   ・共用の端末なので、ログインはせずゲストとして遊ぶ(オンラインランキングには送らない)
+   ========================================================= */
+const EVENT = (() => { const m = location.search.match(/[?&]event(?:=(\d+(?:\.\d+)?))?(?:&|$)/); return m ? { min: m[1] ? Number(m[1]) : 5 } : null; })();
+const EV_MS = EVENT ? Math.max(0.5, EVENT.min) * 60000 : 0;
+const EV_KEY = 'sorabura_event';
+let EV = { start: null, over: false, best: 0, bestDist: 0, runs: 0, warned: {}, timer: 0 };
+function evSave() { try { sessionStorage.setItem(EV_KEY, JSON.stringify({ start: EV.start, best: EV.best, bestDist: EV.bestDist, runs: EV.runs })); } catch (e) {} }
+function evLeft() { return EV.start == null ? EV_MS : Math.max(0, EV.start + EV_MS - Date.now()); }
+function evFmt(ms) { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+function evTell(text) { announce(text); say(text, true); }
+function evStart() {
+  if (!EVENT || EV.start != null) return;
+  EV.start = Date.now(); evSave();
+  clearInterval(EV.timer); EV.timer = setInterval(evTick, 250); evTick();
+}
+function evTick() {
+  if (!EVENT || EV.start == null || EV.over) return;
+  const left = evLeft(), sec = Math.ceil(left / 1000), badge = $('evBadge');
+  badge.classList.remove('hidden'); badge.querySelector('b').textContent = evFmt(left);
+  badge.classList.toggle('warn', sec <= 60);
+  // のこり時間のお知らせ(声と読み上げ)。再読みこみで、すぎたお知らせがまとめて鳴らないように
+  [[60, 'のこり1分'], [30, 'のこり30秒'], [10, 'のこり10秒']].forEach(([t, text]) => {
+    if (sec <= t && sec > t - 3 && !EV.warned[t]) { EV.warned[t] = true; evTell(text); }
+  });
+  if (left <= 0) evFinish();
+}
+function evRecord(r) {
+  EV.runs++;
+  if (!r.practice) { EV.best = Math.max(EV.best, r.score); EV.bestDist = Math.max(EV.bestDist, r.dist); }
+  evSave();
+}
+function evFinish() {
+  if (EV.over) return;
+  EV.over = true; clearInterval(EV.timer); $('evBadge').classList.add('hidden');
+  if (G) {
+    if (!G.over) evRecord({ score: G.score, dist: G.i * 5, practice: G.practice });   // とちゅうのプレイも、ここまでの記録はのこす
+    G.over = true; endGame();
+  }
+  $('overlay').classList.add('hidden');
+  evShowEnd();
+  setTimeout(() => say('時間です。体験おわり。遊んでくれてありがとう!', true), 300);
+}
+function evShowEnd() {
+  $('evBest').textContent = EV.best.toLocaleString(); $('evDist').textContent = EV.bestDist + 'm'; $('evRuns').textContent = EV.runs;
+  $('evMsg').textContent = EVENT.min + '分間、遊んでくれてありがとう!';
+  $('evSr').textContent = '。' + EVENT.min + '分間、遊んでくれてありがとう。ベストスコア ' + EV.best + '点、ベストきょり ' + EV.bestDist + 'メートル、' + EV.runs + '回あそびました。';
+  $('evNextNote').textContent = '';
+  if (current !== 'eventEnd') show('eventEnd');
+}
+function evReset() {
+  clearInterval(EV.timer);
+  EV = { start: null, over: false, best: 0, bestDist: 0, runs: 0, warned: {}, timer: 0 };
+  try { sessionStorage.removeItem(EV_KEY); } catch (e) {}
+  guestScore = null; lastPractice = false;
+  $('evBadge').classList.add('hidden'); $('evBadge').classList.remove('warn');
+  show('title'); announce('次の人の準備ができました');
+}
+if (EVENT) {
+  account = null;   // この画面だけゲストにする(端末に保存されたログインは消さない)
+  $('toLogin').classList.add('hidden');
+  $('registerBtn').style.display = 'none';
+  $('evNote').textContent = '体験版:「はじめる」を押すと ' + EVENT.min + '分スタート!';
+  $('evNote').classList.remove('hidden');
+  // 再読みこみしても、時間は続きから
+  try {
+    const sv = JSON.parse(sessionStorage.getItem(EV_KEY) || 'null');
+    if (sv && sv.start) {
+      Object.assign(EV, { start: sv.start, best: sv.best || 0, bestDist: sv.bestDist || 0, runs: sv.runs || 0 });
+      if (evLeft() <= 0) evFinish(); else { EV.timer = setInterval(evTick, 250); evTick(); }
+    }
+  } catch (e) {}
+  // 次の人へ:2秒長押し(遊んでいる人がうっかり押さないように)
+  let holdT = 0;
+  const btnN = $('evNext');
+  const hold = () => { clearTimeout(holdT); $('evNextNote').textContent = 'そのまま押し続けてください…'; holdT = setTimeout(() => { holdT = 0; evReset(); }, 2000); };
+  const drop = () => { if (!holdT) return; clearTimeout(holdT); holdT = 0; $('evNextNote').textContent = ''; };
+  btnN.addEventListener('pointerdown', e => { e.preventDefault(); hold(); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btnN.addEventListener(ev, drop));
+  btnN.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); hold(); } });
+  btnN.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') drop(); });
+  btnN.addEventListener('click', e => e.preventDefault());
+}
 refreshAccount();
 flushPending();
 window.__sorabura = { get G() { return G; }, targetsList, gnow, release };   // テスト用
