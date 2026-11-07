@@ -163,14 +163,25 @@ html.hc-dark .vo-note{border-top-color:#fff}
 html.hc-dark .btn:focus-visible, html.hc-dark input:focus-visible, html.hc-dark .tab:focus-visible{outline:4px solid #0ff}
 @media (prefers-reduced-motion:reduce){.btn:active,#releaseBtn:active{transform:none}}
 /* 体験イベント(?event)ののこり時間 */
-#evBadge{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:50;pointer-events:none;
-  background:rgba(13,27,42,.9);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:6px 12px;font-size:16px;font-variant-numeric:tabular-nums}
+#evBadge{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:50;
+  background:rgba(13,27,42,.9);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:6px 12px;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;
+  min-height:48px;text-align:left;cursor:pointer;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+#evBadge small{display:block;font-size:12px;opacity:.85}
+/* のこり時間のボタンが出ているあいだは、画面の下にすき間をあけて、いちばん下のボタンにかぶらないようにする(小さいスマホ向け) */
+html.ev-on .screen:not(#game) .card{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+/* 長押ししているあいだ、左から右へたまっていく(2秒で満タン) */
+#evBadge::before{content:"";position:absolute;inset:0;width:0;background:var(--crit);opacity:.35;z-index:-1}
+#evBadge.holding::before{width:100%;transition:width 2s linear}
+#evBadge:focus-visible{outline:4px solid var(--crit);outline-offset:3px}
 #evBadge b{font-size:24px;margin-left:4px}
 #evBadge.warn{border:3px solid var(--crit);color:var(--crit)}
 #evBadge.hidden{display:none}
 html.hc-dark #evBadge{background:#000;color:#fff;border-color:#fff}
 html.hc-dark #evBadge.warn{color:#ff0;border:4px solid #ff0}
-@media (forced-colors:active){#evBadge{border-color:CanvasText}#evBadge.warn{border-width:5px}}
+@media (forced-colors:active){#evBadge{border-color:CanvasText}#evBadge.warn{border-width:5px}#evBadge::before{forced-color-adjust:none;background:Highlight;opacity:1;top:auto;height:6px}}
+/* ハイコントラストでは、文字の下に太い線でたまっていく(文字の後ろをぬると読みにくいので) */
+html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
 </style>
 </head>
 <body>
@@ -246,7 +257,7 @@ html.hc-dark #evBadge.warn{color:#ff0;border:4px solid #ff0}
       <li><b>スロー</b>:100コンボをこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:50コンボをこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
-      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では R でもう一回、P でれんしゅう、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、Esc でもどる。一時停止中は H でタイトルへ。せっていでオフにできます。</li>
+      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、Esc でもどる。一時停止中は H でタイトルへ。せっていでオフにできます。</li>
     </ol></div>
     <div class="panel">
       <p><b>モード</b>(タイトル画面でえらべます)</p>
@@ -344,7 +355,7 @@ html.hc-dark #evBadge.warn{color:#ff0;border:4px solid #ff0}
     <p class="note" id="evNextNote" aria-live="polite"></p>
   </div>
 </section>
-<div id="evBadge" class="hidden" aria-hidden="true">のこり<b>5:00</b></div>
+<button type="button" id="evBadge" class="hidden" aria-label="体験をおわる。2秒長押し。Qキーの長押しでも、おわれます"><span aria-hidden="true">のこり<b>5:00</b><small>長押しでおわる(Qキーも)</small></span></button>
 
 <!-- 結果 -->
 <section id="result" class="screen hidden" aria-labelledby="resH">
@@ -1633,6 +1644,7 @@ document.addEventListener('keydown', e => {
    キーボードの配置や、日本語入力がオンのときでも同じキーで動くように、文字ではなくキーの場所(e.code)で見る */
 const SHORTCUTS = [
   { code: 'KeyR', key: 'R', btn: 'againBtn', on: ['result'] },                       // もう一回
+  { code: 'KeyG', key: 'G', btn: 'startBtn', on: ['title', 'result'] },              // はじめる(本番。G は Go の G。結果画面からも、れんしゅうのあとに本番へ)
   { code: 'KeyP', key: 'P', btn: 'practiceBtn', on: ['title'] },                     // れんしゅう
   { code: 'KeyH', key: 'H', btn: 'resTitle', on: ['result'], go: () => show('title'), anywhere: true },   // タイトル(ホーム)
   { code: 'KeyL', key: 'L', btn: ['toRanking', 'resRanking'], go: () => openRanking(current), anywhere: true },
@@ -1920,7 +1932,7 @@ const EVENT = (() => { const m = location.search.match(/[?&]event(?:=(\d+(?:\.\d
 const EV_MS = EVENT ? Math.max(0.5, EVENT.min) * 60000 : 0;
 const EV_KEY = 'sorabura_event';
 let EV = { start: null, over: false, best: 0, bestDist: 0, runs: 0, warned: {}, timer: 0 };
-function evSave() { try { sessionStorage.setItem(EV_KEY, JSON.stringify({ start: EV.start, best: EV.best, bestDist: EV.bestDist, runs: EV.runs })); } catch (e) {} }
+function evSave() { try { sessionStorage.setItem(EV_KEY, JSON.stringify({ start: EV.start, best: EV.best, bestDist: EV.bestDist, runs: EV.runs, over: EV.over, early: EV.early })); } catch (e) {} }
 function evLeft() { return EV.start == null ? EV_MS : Math.max(0, EV.start + EV_MS - Date.now()); }
 function evFmt(ms) { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
 function evTell(text) { announce(text); say(text, true); }
@@ -1932,7 +1944,7 @@ function evStart() {
 function evTick() {
   if (!EVENT || EV.start == null || EV.over) return;
   const left = evLeft(), sec = Math.ceil(left / 1000), badge = $('evBadge');
-  badge.classList.remove('hidden'); badge.querySelector('b').textContent = evFmt(left);
+  badge.classList.remove('hidden'); document.documentElement.classList.add('ev-on'); badge.querySelector('b').textContent = evFmt(left);
   badge.classList.toggle('warn', sec <= 60);
   // のこり時間のお知らせ(声と読み上げ)。再読みこみで、すぎたお知らせがまとめて鳴らないように
   [[60, 'のこり1分'], [30, 'のこり30秒'], [10, 'のこり10秒']].forEach(([t, text]) => {
@@ -1945,27 +1957,42 @@ function evRecord(r) {
   if (!r.practice) { EV.best = Math.max(EV.best, r.score); EV.bestDist = Math.max(EV.bestDist, r.dist); }
   evSave();
 }
-function evFinish() {
+function evFinish(early) {
   if (EV.over) return;
-  EV.over = true; clearInterval(EV.timer); $('evBadge').classList.add('hidden');
+  EV.over = true; EV.early = !!early; clearInterval(EV.timer); evDrop(); $('evBadge').classList.add('hidden'); document.documentElement.classList.remove('ev-on');
   if (G) {
     if (!G.over) evRecord({ score: G.score, dist: G.i * 5, practice: G.practice });   // とちゅうのプレイも、ここまでの記録はのこす
     G.over = true; endGame();
   }
   $('overlay').classList.add('hidden');
+  evSave();
   evShowEnd();
-  setTimeout(() => say('時間です。体験おわり。遊んでくれてありがとう!', true), 300);
+  setTimeout(() => say(early ? '体験おわり。遊んでくれてありがとう!' : '時間です。体験おわり。遊んでくれてありがとう!', true), 300);
 }
 function evShowEnd() {
   $('evBest').textContent = EV.best.toLocaleString(); $('evDist').textContent = EV.bestDist + 'm'; $('evRuns').textContent = EV.runs;
-  $('evMsg').textContent = EVENT.min + '分間、遊んでくれてありがとう!';
-  $('evSr').textContent = '。' + EVENT.min + '分間、遊んでくれてありがとう。ベストスコア ' + EV.best + '点、ベストきょり ' + EV.bestDist + 'メートル、' + EV.runs + '回あそびました。';
+  const thanks = EV.early ? '遊んでくれてありがとう' : EVENT.min + '分間、遊んでくれてありがとう';
+  $('evMsg').textContent = thanks + '!';
+  $('evSr').textContent = '。' + thanks + '。ベストスコア ' + EV.best + '点、ベストきょり ' + EV.bestDist + 'メートル、' + EV.runs + '回あそびました。';
   $('evNextNote').textContent = '';
   if (current !== 'eventEnd') show('eventEnd');
 }
+let evHoldT = 0;
+function evHold() {
+  if (!EVENT || EV.over || EV.start == null) return;
+  clearTimeout(evHoldT); $('evBadge').classList.add('holding');
+  announce('そのまま押し続けると、体験をおわります');
+  evHoldT = setTimeout(() => { evHoldT = 0; $('evBadge').classList.remove('holding'); evFinish(true); }, 2000);
+}
+function evDrop() {
+  const was = !!evHoldT;
+  clearTimeout(evHoldT); evHoldT = 0; const b = $('evBadge'); if (b) b.classList.remove('holding');
+  // ゲーム中にキーボードでこのボタンに来て、2秒より前にはなしたら、ゲームにもどす(そのままだとスペースで「はなす」ができない)
+  if (was && current === 'game' && document.activeElement === b) $('stage').focus();
+}
 function evReset() {
   clearInterval(EV.timer);
-  EV = { start: null, over: false, best: 0, bestDist: 0, runs: 0, warned: {}, timer: 0 };
+  EV = { start: null, over: false, early: false, best: 0, bestDist: 0, runs: 0, warned: {}, timer: 0 };
   try { sessionStorage.removeItem(EV_KEY); } catch (e) {}
   guestScore = null; lastPractice = false;
   // 前の人が変えたモードやせっていを元にもどす(音量0・声オフ・「ふつう」のままだと、次の人が目の見えない人のときに困るので)
@@ -1977,7 +2004,7 @@ function evReset() {
   ['Voice', 'Vib', 'Guide', 'Bar', 'Calm', 'HcDark', 'Keys'].forEach(k => { $('s' + k).checked = settings[k[0].toLowerCase() + k.slice(1)]; });
   if (master) master.gain.value = settings.vol;
   updatePalette(); markKeys();
-  $('evBadge').classList.add('hidden'); $('evBadge').classList.remove('warn');
+  $('evBadge').classList.add('hidden'); document.documentElement.classList.remove('ev-on'); $('evBadge').classList.remove('warn');
   show('title'); announce('次の人の準備ができました');
 }
 if (EVENT) {
@@ -1993,7 +2020,8 @@ if (EVENT) {
     const sv = JSON.parse(sessionStorage.getItem(EV_KEY) || 'null');
     if (sv && sv.start) {
       Object.assign(EV, { start: sv.start, best: sv.best || 0, bestDist: sv.bestDist || 0, runs: sv.runs || 0 });
-      if (evLeft() <= 0) evFinish(); else { EV.timer = setInterval(evTick, 250); evTick(); }
+      if (sv.over) { EV.over = true; EV.early = !!sv.early; evShowEnd(); }   // 長押しでおわったあとに再読みこみしても、おわりのまま
+      else if (evLeft() <= 0) evFinish(); else { EV.timer = setInterval(evTick, 250); evTick(); }
     }
   } catch (e) {}
   // 次の人へ:2秒長押し(遊んでいる人がうっかり押さないように)
@@ -2006,6 +2034,25 @@ if (EVENT) {
   btnN.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); hold(); } });
   btnN.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') drop(); });
   btnN.addEventListener('click', e => e.preventDefault());
+  // 体験をとちゅうでおわる:のこり時間の表示を2秒長押し(ゲーム中でも)
+  const bd = $('evBadge');
+  bd.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); evHold(); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => bd.addEventListener(ev, evDrop));
+  // キーボード:Enter / スペースを2秒押し続ける(ゲームの「はなす」にならないように、ここで止める)
+  bd.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) evHold(); } });
+  bd.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); evDrop(); } });
+  bd.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+  bd.addEventListener('contextmenu', e => e.preventDefault());   // スマホの長押しメニューを出さない
+  // Q キーを2秒長押ししても、とちゅうでおわれる(どこにフォーカスがあっても。日本語入力がオンでも動くよう、キーの場所で見る)
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'KeyQ' || e.ctrlKey || e.altKey || e.metaKey) return;
+    const el = document.activeElement;
+    if (el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(el.type)))) return;
+    e.preventDefault();
+    if (!e.repeat && !evHoldT) evHold();
+  });
+  document.addEventListener('keyup', e => { if (e.code === 'KeyQ') evDrop(); });
+  window.addEventListener('blur', evDrop);   // 押したままほかのウィンドウに行ったら取り消す
 }
 refreshAccount();
 flushPending();
