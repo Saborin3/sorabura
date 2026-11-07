@@ -387,7 +387,8 @@ const store = {
   set(k, v) { try { localStorage.setItem('sorabura_' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('sorabura_' + k); } catch (e) {} },
 };
-const settings = Object.assign({ vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true, keys: true }, store.get('settings', {}));
+const SETTING_DEFAULTS = { vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true, keys: true };
+const settings = Object.assign({}, SETTING_DEFAULTS, store.get('settings', {}));
 let account = store.get('account', null);   // {name, token}
 
 /* ---------- 読み上げ ---------- */
@@ -1967,6 +1968,15 @@ function evReset() {
   EV = { start: null, over: false, best: 0, bestDist: 0, runs: 0, warned: {}, timer: 0 };
   try { sessionStorage.removeItem(EV_KEY); } catch (e) {}
   guestScore = null; lastPractice = false;
+  // 前の人が変えたモードやせっていを元にもどす(音量0・声オフ・「ふつう」のままだと、次の人が目の見えない人のときに困るので)
+  Object.assign(settings, SETTING_DEFAULTS); store.set('settings', settings);
+  settings.mode = 'nolook'; store.set('mode', 'nolook');
+  document.querySelectorAll('input[name=mode]').forEach(r => { r.checked = r.value === 'nolook'; });
+  $('sVol').value = settings.vol * 100; $('vVol').textContent = Math.round(settings.vol * 100) + '%';
+  $('sOff').value = 0; $('vOff').textContent = '0ms';
+  ['Voice', 'Vib', 'Guide', 'Bar', 'Calm', 'HcDark', 'Keys'].forEach(k => { $('s' + k).checked = settings[k[0].toLowerCase() + k.slice(1)]; });
+  if (master) master.gain.value = settings.vol;
+  updatePalette(); markKeys();
   $('evBadge').classList.add('hidden'); $('evBadge').classList.remove('warn');
   show('title'); announce('次の人の準備ができました');
 }
@@ -1974,6 +1984,8 @@ if (EVENT) {
   account = null;   // この画面だけゲストにする(端末に保存されたログインは消さない)
   $('toLogin').classList.add('hidden');
   $('registerBtn').style.display = 'none';
+  // 共用の端末なので、ほかのページに行ってしまわないように、外へのリンクはかくす(体験おわり画面に URL は出している)
+  document.querySelectorAll('a.btn[href^="http"]').forEach(x => { x.hidden = true; x.style.display = 'none'; });
   $('evNote').textContent = '体験版:「はじめる」を押すと ' + EVENT.min + '分スタート!';
   $('evNote').classList.remove('hidden');
   // 再読みこみしても、時間は続きから
