@@ -1977,12 +1977,25 @@ function evShowEnd() {
   $('evNextNote').textContent = '';
   if (current !== 'eventEnd') show('eventEnd');
 }
+// 長押しで画面が切りかわったとき、押したままのキー(Enter・スペース・Q)が、つぎの画面のボタンに届かないようにする
+// (Enter を押しっぱなしにすると、キーの連打が「はじめる」に届いて、勝手にゲームが始まってしまうので)
+const heldKeys = new Set(); let swallowKeys = new Set();
+window.addEventListener('keydown', e => {
+  if (swallowKeys.has(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  heldKeys.add(e.code);
+}, true);
+window.addEventListener('keyup', e => {
+  heldKeys.delete(e.code);
+  if (swallowKeys.has(e.code)) { swallowKeys.delete(e.code); e.preventDefault(); e.stopImmediatePropagation(); }   // スペースはキーをはなしたときにボタンが押されるので、それも止める
+}, true);
+window.addEventListener('blur', () => { heldKeys.clear(); swallowKeys.clear(); });
+function swallowHeldKeys() { swallowKeys = new Set(heldKeys); }
 let evHoldT = 0;
 function evHold() {
   if (!EVENT || EV.over || EV.start == null) return;
   clearTimeout(evHoldT); $('evBadge').classList.add('holding');
   announce('そのまま押し続けると、体験をおわります');
-  evHoldT = setTimeout(() => { evHoldT = 0; $('evBadge').classList.remove('holding'); evFinish(true); }, 2000);
+  evHoldT = setTimeout(() => { evHoldT = 0; $('evBadge').classList.remove('holding'); swallowHeldKeys(); evFinish(true); }, 2000);
 }
 function evDrop() {
   const was = !!evHoldT;
@@ -2027,7 +2040,7 @@ if (EVENT) {
   // 次の人へ:2秒長押し(遊んでいる人がうっかり押さないように)
   let holdT = 0;
   const btnN = $('evNext');
-  const hold = () => { clearTimeout(holdT); $('evNextNote').textContent = 'そのまま押し続けてください…'; holdT = setTimeout(() => { holdT = 0; evReset(); }, 2000); };
+  const hold = () => { clearTimeout(holdT); $('evNextNote').textContent = 'そのまま押し続けてください…'; holdT = setTimeout(() => { holdT = 0; swallowHeldKeys(); evReset(); }, 2000); };
   const drop = () => { if (!holdT) return; clearTimeout(holdT); holdT = 0; $('evNextNote').textContent = ''; };
   btnN.addEventListener('pointerdown', e => { e.preventDefault(); hold(); });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btnN.addEventListener(ev, drop));
