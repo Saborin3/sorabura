@@ -108,7 +108,7 @@ ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:norm
 .ttl-list input{width:22px;height:22px;flex:none}
 .ttl-list .ttl{margin-left:0}
 #ttlMsg{min-height:1.5em;text-align:center;font-weight:bold}
-.me-row{gap:8px}.me-row .btn{font-size:15px;padding:10px}
+.me-row{gap:10px}
 #ofPreview{display:block;margin:0 auto;width:120px;height:150px;border-radius:12px;border:2px solid var(--line)}
 .of-list{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 .of-list label{display:flex;align-items:center;gap:8px;padding:10px 2px;cursor:pointer;font-size:16px}
@@ -317,7 +317,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <li><b>スロー</b>:100コンボをこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:50コンボをこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
-      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、M でモードえらびへ、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、N でメニュー、I でお知らせ、Q でお問い合わせ、T で称号・C で着せかえ(ログインしているとき)、Esc でもどる。一時停止中は H でタイトルへ、Q でお問い合わせ。せっていでオフにできます。</li>
+      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、M でモードえらびへ、H でホーム、L でランキング、S でせってい、A であそびかた、N でメニュー、I でお知らせ、Q でお問い合わせ、T で称号、C で着せかえ、Esc でもどる。一時停止中は H でホームへ、Q でお問い合わせ。せっていでオフにできます。</li>
     </ol></div>
     <div class="panel">
       <p><b>モード</b>(ホーム画面でえらべます)</p>
@@ -382,6 +382,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     <h2 id="ofH">着せかえ</h2>
     <canvas id="ofPreview" aria-hidden="true"></canvas>
     <p class="note" id="ofStatus" role="status"></p>
+    <button class="btn hidden" id="ofLogin">ログイン・登録する</button>
     <fieldset class="panel of-list hidden" id="ofList"><legend class="sr-only">棒人間の服の色</legend></fieldset>
     <p id="ofMsg" role="status"></p>
     <button class="btn ghost" data-back>もどる</button>
@@ -393,6 +394,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     <h2 id="tsH">称号</h2>
     <p class="note" style="text-align:left">今期(半月ごと)のランキングで3位以内に入ると、期がおわったときに称号がもらえます。1位は金の「第〇回王者」、2位は銀、3位は銅。ランキングで名前のとなりに出す称号をえらべます。</p>
     <p class="note" id="tsStatus" role="status"></p>
+    <button class="btn hidden" id="tsLogin">ログイン・登録する</button>
     <fieldset class="panel ttl-list hidden" id="tsList"><legend class="sr-only">名前のとなりに出す称号</legend></fieldset>
     <p id="ttlMsg" role="status"></p>
     <button class="btn hidden" id="tsSave">この称号にする</button>
@@ -453,7 +455,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     <div class="card">
       <h2 id="ovH">一時停止</h2>
       <button class="btn" id="resumeBtn">つづける</button>
-      <button class="btn ghost" id="quitBtn">タイトルへ</button>
+      <button class="btn ghost" id="quitBtn">ホームへ</button>
       <button class="btn ghost no-event" id="pzContact">お問い合わせ</button>
     </div>
   </div>
@@ -496,7 +498,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     <button class="btn" id="againBtn">もう一回</button>
     <div class="row">
       <button class="btn ghost" id="resRanking">ランキング</button>
-      <button class="btn ghost" id="resTitle">タイトルへ</button>
+      <button class="btn ghost" id="resTitle">ホームへ</button>
     </div>
     <button class="btn ghost no-event" id="resContact">お問い合わせ(バグ・要望・感想)</button>
     <a class="btn ghost" href="https://saborin3.github.io/">saborinのほかの作品</a>
@@ -807,6 +809,8 @@ function goBack() {
     if (G && G.paused) { show('game'); setTimeout(() => $('resumeBtn').focus(), 40); return; }
     return show('title');
   }
+  // ログイン画面から称号・着せかえにもどったときは、そのつぎの「もどる」でメニューへ
+  if (to === 'titlesel' || to === 'outfit') return show(to, 'menu');
   show(to);
 }
 
@@ -815,7 +819,7 @@ function refreshAccount() {
   $('accountText').innerHTML = account ? 'ログイン中:<b></b>' : 'ゲストで遊んでいます';
   if (account) $('accountText').querySelector('b').textContent = account.name;
   $('toLogin').textContent = account ? '切りかえ' : 'ログイン';
-  $('meRow').classList.toggle('hidden', !account || !CONFIG.SERVER_URL || !!EVENT);
+  $('meRow').classList.toggle('hidden', !CONFIG.SERVER_URL || !!EVENT);   // ゲストのときも出して、こういう機能があると気づいてもらう
 }
 
 /* =========================================================
@@ -914,6 +918,9 @@ $('loginForm').addEventListener('submit', async e => {
         $('registerBtn').classList.add('hidden');
         show('result'); announce(hello + '。さっきのスコアを送ります');
         sendScore(g.data, g.note);
+      } else if (backTo === 'titlesel' || backTo === 'outfit') {
+        // 称号・着せかえのページからログインしたときは、そのページにもどって中身を見せる
+        announce(hello); if (backTo === 'titlesel') openTitles('menu'); else openOutfit('menu');
       } else { show('title'); announce(hello); }
       flushPending();
     } else $('loginMsg').textContent = errText(r.error);
@@ -1928,8 +1935,8 @@ const SHORTCUTS = [
   { code: 'KeyS', key: 'S', btn: 'toSettings', go: () => show('settings', current), anywhere: true },
   { code: 'KeyA', key: 'A', btn: 'toHowto', go: () => show('howto', current), anywhere: true },
   { code: 'KeyM', key: 'M', btn: [], go: () => focusModes(), anywhere: true },   // モードえらびへ(ほかの画面からはタイトルへもどって)
-  { code: 'KeyC', key: 'C', btn: 'toOutfit', go: () => { if (account && CONFIG.SERVER_URL) openOutfit(current); }, anywhere: true, noEvent: true },   // 着せかえ(Clothes)
-  { code: 'KeyT', key: 'T', btn: 'toTitles', go: () => { if (account && CONFIG.SERVER_URL) openTitles(current); }, anywhere: true, noEvent: true },   // 称号(ログインしているとき)
+  { code: 'KeyC', key: 'C', btn: 'toOutfit', go: () => { if (CONFIG.SERVER_URL) openOutfit(current); }, anywhere: true, noEvent: true },   // 着せかえ(Clothes)
+  { code: 'KeyT', key: 'T', btn: 'toTitles', go: () => { if (CONFIG.SERVER_URL) openTitles(current); }, anywhere: true, noEvent: true },   // 称号(ログインしているとき)
   { code: 'KeyI', key: 'I', btn: 'toNews', go: () => openNews(current), anywhere: true, noEvent: true },                    // お知らせ(アイクエと同じ I)
   { code: 'KeyQ', key: 'Q', btn: ['toContact', 'resContact'], go: () => openContact(current), anywhere: true, noEvent: true },   // お問い合わせ(アイクエと同じ Q。体験イベントでは Q は「おわる」)
 ];
@@ -2256,9 +2263,12 @@ async function checkOutfitRank() {
   return { sr, ar };
 }
 async function openOutfit(from) {
-  if (!account || !CONFIG.SERVER_URL) return;
+  if (!CONFIG.SERVER_URL) return;
   show('outfit', from || current);
-  $('ofStatus').textContent = '順位をたしかめています…'; $('ofList').classList.add('hidden'); $('ofMsg').textContent = '';
+  $('ofList').classList.add('hidden'); $('ofMsg').textContent = '';
+  $('ofLogin').classList.toggle('hidden', !!account);
+  if (!account) { drawOutfitPreview(); $('ofStatus').textContent = '着せかえは、ログインすると使えます(はじめての名前なら、そのまま登録できます)。ログインして今期か歴代のランキングで' + OUTFIT_TOP + '位以内に入ると、棒人間の服の色を10色からえらべます。'; return; }
+  $('ofStatus').textContent = '順位をたしかめています…';
   drawOutfitPreview();
   try {
     const { sr, ar } = await checkOutfitRank();
@@ -2293,9 +2303,12 @@ $('toOutfit').addEventListener('click', () => openOutfit('menu'));
 /* ---------- 称号えらび ---------- */
 let tsOwned = [], tsChosen = '';
 async function openTitles(from) {
-  if (!account || !CONFIG.SERVER_URL) return;
+  if (!CONFIG.SERVER_URL) return;
   show('titlesel', from || current);
-  $('tsStatus').textContent = '読みこみ中…'; $('tsList').classList.add('hidden'); $('tsSave').classList.add('hidden'); $('ttlMsg').textContent = '';
+  $('tsList').classList.add('hidden'); $('tsSave').classList.add('hidden'); $('ttlMsg').textContent = '';
+  $('tsLogin').classList.toggle('hidden', !!account);
+  if (!account) { $('tsStatus').textContent = '称号は、ログインすると使えます(はじめての名前なら、そのまま登録できます)。ログインして今期のランキングで3位以内に入ると、期のおわりに金・銀・銅の称号がもらえます。'; return; }
+  $('tsStatus').textContent = '読みこみ中…';
   try {
     const r = await apiPost({ action: 'titles', name: account.name, token: account.token });
     if (!r || !r.ok) {
@@ -2340,6 +2353,8 @@ async function saveTitle() {
 }
 $('toTitles').addEventListener('click', () => openTitles('menu'));
 $('tsSave').addEventListener('click', saveTitle);
+$('tsLogin').addEventListener('click', () => openLogin('titlesel'));
+$('ofLogin').addEventListener('click', () => openLogin('outfit'));
 
 /* ---------- タイトルのボタン ---------- */
 $('startBtn').addEventListener('click', () => newGame(false));
