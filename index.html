@@ -99,6 +99,24 @@ ol.rank .sc{font-size:18px;font-weight:bold;font-variant-numeric:tabular-nums;te
 ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:normal}
 .ttl{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:12px;font-weight:bold;color:#fff;background:var(--title);vertical-align:2px}
 .ttl-text{color:var(--title);font-weight:bold}
+/* 金・銀・銅(色だけでなく、文字でも「王者」「銀」「銅」とわかる。白い文字が読める濃さにしてある) */
+.ttl.gold{background:#8a6a00}.ttl.silver{background:#5b6672}.ttl.bronze{background:#8a4b1f}
+.podium{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.podium li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.ttl-list label{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-size:16px}
+.ttl-list label:last-child{border-bottom:0}
+.ttl-list input{width:22px;height:22px;flex:none}
+.ttl-list .ttl{margin-left:0}
+#ttlMsg{min-height:1.5em;text-align:center;font-weight:bold}
+.me-row{gap:8px}.me-row .btn{font-size:15px;padding:10px}
+#ofPreview{display:block;margin:0 auto;width:120px;height:150px;border-radius:12px;border:2px solid var(--line)}
+.of-list{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.of-list label{display:flex;align-items:center;gap:8px;padding:10px 2px;cursor:pointer;font-size:16px}
+.of-list label:first-of-type{grid-column:1/-1}
+.of-list input{width:22px;height:22px;flex:none}
+.swatch{width:26px;height:26px;border-radius:50%;border:2px solid #111;box-shadow:0 0 0 2px var(--ink);flex:none}
+.swatch.none{background:transparent;box-shadow:none;border:2px dashed var(--sub)}
+#ofMsg{min-height:1.5em;text-align:center;font-weight:bold}
 .champs{font-size:14px;color:var(--sub);text-align:center}
 
 /* ゲーム */
@@ -125,7 +143,7 @@ ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:norm
 .stats b{display:block;font-size:22px;color:var(--ink)}
 #resultMsg{text-align:center;font-size:16px;min-height:1.7em}
 h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移すフォーカスの枠は出さない */
-.btn.hidden,.panel.hidden{display:none !important}
+.hidden,.btn.hidden,.panel.hidden{display:none !important}
 .modes{border:2px solid var(--line);border-radius:12px;padding:6px 8px 8px;margin:0;display:flex;gap:6px}
 .modes legend{font-size:14px;color:var(--sub);padding:0 4px}
 .modes label{flex:1;position:relative;cursor:pointer}
@@ -164,7 +182,8 @@ html.hc-dark .tab[aria-selected=true]::before{content:"● "}
 html.hc-dark ol.rank li.me{border:4px solid #ff0}
 html.hc-dark .note, html.hc-dark .season, html.hc-dark .champs, html.hc-dark .stats div, html.hc-dark h1 small{color:#fff}
 html.hc-dark .big-score, html.hc-dark .next-goal{color:#ff0}
-html.hc-dark .ttl{background:#000;color:#ff0;border:1px solid #ff0}
+html.hc-dark .ttl, html.hc-dark .ttl.gold, html.hc-dark .ttl.silver, html.hc-dark .ttl.bronze{background:#000;color:#ff0;border:1px solid #ff0}
+html.hc-dark .ttl-list label{border-color:#fff}
 html.hc-dark .ttl-text{color:#ff0}
 html.hc-dark .barmark{color:#fff;border-color:#fff}
 html.hc-dark .barmark.nolookmark{background:#000;color:#0ff;border:2px solid #0ff}
@@ -222,6 +241,23 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     </fieldset>
     <p class="next-goal hidden" id="evNote"></p>
     <button class="btn" id="startBtn">はじめる</button>
+    <div class="row">
+      <button class="btn ghost" id="toRanking">ランキング</button>
+      <button class="btn ghost" id="toMenu">メニュー<span class="new-badge hidden" id="menuNew" aria-hidden="true">新着</span></button>
+    </div>
+    <!-- VoiceOver の人は「はじめる」の前に読む必要があるので、これだけはホームに残す -->
+    <p class="note vo-note">VoiceOverをお使いの方は、「はじめる」を押してからVoiceOverをお切りください。</p>
+  </div>
+</section>
+
+<!-- メニュー(ホームに出さないものは全部ここ) -->
+<section id="menu" class="screen hidden" aria-labelledby="menuH">
+  <div class="card">
+    <h2 id="menuH">メニュー</h2>
+    <div class="row me-row no-event hidden" id="meRow">
+      <button class="btn ghost" id="toTitles">称号</button>
+      <button class="btn ghost" id="toOutfit">着せかえ</button>
+    </div>
     <button class="btn ghost" id="practiceBtn">れんしゅう(ミスしてもOK)</button>
     <!-- テスト用(URLの最後に ?test をつけたときだけ出る)。れんしゅうなのでランキングには入らない -->
     <label class="panel hidden" id="testBox" style="display:flex;flex-direction:column;gap:8px">
@@ -237,18 +273,17 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       </select>
     </label>
     <div class="row">
-      <button class="btn ghost" id="toRanking">ランキング</button>
       <button class="btn ghost" id="toHowto">あそびかた</button>
+      <button class="btn ghost" id="toSettings">せってい</button>
     </div>
     <div class="row">
-      <button class="btn ghost" id="toSettings">せってい</button>
       <button class="btn ghost no-event" id="toNews">お知らせ<span class="new-badge hidden" id="newsNew" aria-hidden="true">新着</span></button>
+      <button class="btn ghost no-event" id="toContact">お問い合わせ</button>
     </div>
-    <button class="btn ghost no-event" id="toContact">お問い合わせ(バグ・要望・感想)</button>
     <a class="btn ghost" href="https://saborin3.github.io/">saborinのほかの作品</a>
     <p class="note">音と絵の両方で「はなすタイミング」がわかります。<br>スペースキー・Enter・画面タップで手をはなします。<br>スマホは縦向きがおすすめ。</p>
-    <p class="note vo-note">VoiceOverをお使いの方は、「はじめる」を押してからVoiceOverをお切りください。</p>
     <p class="note">iPhoneで効果音が鳴らないときは、マナーモード(消音)をオフにしてください。</p>
+    <button class="btn" data-back>もどる</button>
   </div>
 </section>
 
@@ -282,10 +317,10 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <li><b>スロー</b>:100コンボをこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:50コンボをこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
-      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、M でモードえらびへ、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、I でお知らせ、Q でお問い合わせ、Esc でもどる。一時停止中は H でタイトルへ、Q でお問い合わせ。せっていでオフにできます。</li>
+      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、M でモードえらびへ、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、N でメニュー、I でお知らせ、Q でお問い合わせ、T で称号・C で着せかえ(ログインしているとき)、Esc でもどる。一時停止中は H でタイトルへ、Q でお問い合わせ。せっていでオフにできます。</li>
     </ol></div>
     <div class="panel">
-      <p><b>モード</b>(タイトル画面でえらべます)</p>
+      <p><b>モード</b>(ホーム画面でえらべます)</p>
       <p>・<b>ふつう</b>:音と絵の両方で合図が出ます。</p>
       <p>・<b>ノールック</b>:大きな手のひらか青い鳥が画面をふさいで、音だけで遊びます。目が見えない人も、目をつぶって挑戦したい人も。</p>
       <p>・<b>サイレント</b>:ゲームの音と声が全部消え、絵だけで遊びます。</p>
@@ -336,11 +371,34 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     </div>
     <p class="season" id="seasonText"></p>
     <ol class="rank" id="rankList" aria-live="polite"></ol>
-    <p class="champs" id="champText"></p>
+    <div class="champs" id="champText"></div>
     <button class="btn" data-back>もどる</button>
   </div>
 </section>
 
+<!-- 着せかえ(ランキング5位以内の人だけ) -->
+<section id="outfit" class="screen hidden" aria-labelledby="ofH">
+  <div class="card">
+    <h2 id="ofH">着せかえ</h2>
+    <canvas id="ofPreview" aria-hidden="true"></canvas>
+    <p class="note" id="ofStatus" role="status"></p>
+    <fieldset class="panel of-list hidden" id="ofList"><legend class="sr-only">棒人間の服の色</legend></fieldset>
+    <p id="ofMsg" role="status"></p>
+    <button class="btn ghost" data-back>もどる</button>
+  </div>
+</section>
+<!-- 称号えらび(ログインしている人だけ) -->
+<section id="titlesel" class="screen hidden" aria-labelledby="tsH">
+  <div class="card">
+    <h2 id="tsH">称号</h2>
+    <p class="note" style="text-align:left">今期(半月ごと)のランキングで3位以内に入ると、期がおわったときに称号がもらえます。1位は金の「第〇回王者」、2位は銀、3位は銅。ランキングで名前のとなりに出す称号をえらべます。</p>
+    <p class="note" id="tsStatus" role="status"></p>
+    <fieldset class="panel ttl-list hidden" id="tsList"><legend class="sr-only">名前のとなりに出す称号</legend></fieldset>
+    <p id="ttlMsg" role="status"></p>
+    <button class="btn hidden" id="tsSave">この称号にする</button>
+    <button class="btn ghost" data-back>もどる</button>
+  </div>
+</section>
 <!-- お知らせ(アップデート情報)。中身は script の NEWS に書く -->
 <section id="news" class="screen hidden" aria-labelledby="newsH">
   <div class="card">
@@ -732,13 +790,13 @@ function swingStop() { if (swing) { try { swing.s.stop(); } catch (e) {} swing =
 /* =========================================================
    画面の切りかえ
    ========================================================= */
-const screens = ['title', 'login', 'howto', 'settings', 'ranking', 'news', 'contact', 'game', 'result', 'eventEnd'];
+const screens = ['title', 'menu', 'login', 'howto', 'settings', 'ranking', 'titlesel', 'outfit', 'news', 'contact', 'game', 'result', 'eventEnd'];
 let current = 'title', backTo = 'title';
 function show(id, from) {
   screens.forEach(s => $(s).classList.toggle('hidden', s !== id));
   if (from) backTo = from;
   current = id;
-  const focusEl = { title: $('startBtn'), login: $('nameIn'), howto: $('howH'), settings: $('setH'), ranking: $('tabSeason'), news: $('newsH'), contact: $('ctH'), game: $('stage'), result: $('resH'), eventEnd: $('evH') }[id];
+  const focusEl = { title: $('startBtn'), menu: $('menuH'), login: $('nameIn'), howto: $('howH'), settings: $('setH'), ranking: $('tabSeason'), news: $('newsH'), contact: $('ctH'), titlesel: $('tsH'), outfit: $('ofH'), game: $('stage'), result: $('resH'), eventEnd: $('evH') }[id];
   if (focusEl) { if (!focusEl.hasAttribute('tabindex') && /^H\d/.test(focusEl.tagName)) focusEl.setAttribute('tabindex', '-1'); setTimeout(() => focusEl.focus(), 30); }
 }
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => goBack()));
@@ -753,9 +811,11 @@ function goBack() {
 }
 
 function refreshAccount() {
+  outfitMemo = null;
   $('accountText').innerHTML = account ? 'ログイン中:<b></b>' : 'ゲストで遊んでいます';
   if (account) $('accountText').querySelector('b').textContent = account.name;
   $('toLogin').textContent = account ? '切りかえ' : 'ログイン';
+  $('meRow').classList.toggle('hidden', !account || !CONFIG.SERVER_URL || !!EVENT);
 }
 
 /* =========================================================
@@ -1650,15 +1710,15 @@ function drawPop(now) {
   ctx.restore();
 }
 // 棒人間
-function drawStick(P) {
+function drawStick(P, g = ctx, shirt = outfitColor()) {
   const d = { x: Math.sin(P.ang), y: Math.cos(P.ang) }, n = { x: -d.y, y: d.x };
   const at = (b, k) => ({ x: b.x + d.x * k, y: b.y + d.y * k });
   const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
   let H = { x: P.x, y: P.y };
   if (P.mode === 'lie') H = { x: P.x - 50, y: P.y };
   const sh = at(H, 30), head = at(H, 15), hip = at(H, 74);
-  ctx.strokeStyle = C.ink; ctx.fillStyle = C.ink; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const line = (a, b, c) => { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); if (c) ctx.lineTo(c.x, c.y); ctx.stroke(); };
+  g.strokeStyle = C.ink; g.fillStyle = C.ink; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';
+  const line = (a, b, c) => { g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); if (c) g.lineTo(c.x, c.y); g.stroke(); };
   // うで
   if (P.mode === 'fall' || P.mode === 'lie') {
     const a1 = rot(d, -2.2), a2 = rot(d, 2.2);
@@ -1666,10 +1726,17 @@ function drawStick(P) {
   } else {
     line(sh, { x: H.x + n.x * 6, y: H.y + n.y * 6 }); line(sh, { x: H.x - n.x * 6, y: H.y - n.y * 6 });
   }
-  // からだ・頭
+  // からだ・頭(服:ランキング5位以内の人が色をえらべる。黒いふちどりで、どの背景でも見える。服は背骨の上にかさねる)
   line(sh, hip);
-  ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(head.x, head.y, 10, 0, Math.PI * 2); ctx.fillStyle = C.head; ctx.fill(); ctx.stroke();
-  ctx.lineWidth = 5;
+  if (shirt) {
+    const waist = at(H, 62), el = (v, k) => ({ x: sh.x + v.x * k, y: sh.y + v.y * k });
+    const arms = P.mode === 'fall' || P.mode === 'lie' ? [rot(d, -2.2), rot(d, 2.2)] : [{ x: (H.x + n.x * 6 - sh.x) / 30, y: (H.y + n.y * 6 - sh.y) / 30 }, { x: (H.x - n.x * 6 - sh.x) / 30, y: (H.y - n.y * 6 - sh.y) / 30 }];
+    g.strokeStyle = '#111'; g.lineWidth = 19; line(sh, waist); g.lineWidth = 12; arms.forEach(v => line(sh, el(v, 12)));
+    g.strokeStyle = shirt; g.lineWidth = 15; line(sh, waist); g.lineWidth = 8; arms.forEach(v => line(sh, el(v, 11)));
+    g.strokeStyle = C.ink;
+  }
+  g.lineWidth = 4; g.beginPath(); g.arc(head.x, head.y, 10, 0, Math.PI * 2); g.fillStyle = C.head; g.fill(); g.stroke();
+  g.lineWidth = 5;
   // あし(ゆれに少し遅れてついてくる)
   const lag = P.mode === 'hang' ? -P.ang * 0.35 : 0;
   if (P.mode === 'tuck') {
@@ -1717,8 +1784,21 @@ document.addEventListener('keydown', e => {
    新しいお知らせは、いちばん上に足す。id は前のより大きい数字にすると、タイトルの「お知らせ」に「新着」が出る
    ========================================================= */
 const NEWS = [
+  { id: 7, date: '2026/11/09', title: 'ホーム画面をすっきりさせました', items: [
+    'ホームは「ログイン」「モード」「はじめる」「ランキング」「メニュー」だけになりました',
+    'れんしゅう・あそびかた・せってい・お知らせ・お問い合わせ・称号・着せかえは「メニュー」の中にあります(キーボードなら N。ほかのキーはホームからそのまま使えます)',
+  ] },
+  { id: 6, date: '2026/11/09', title: '着せかえができました(ランキング5位以内)', items: [
+    '今期か歴代のランキングで5位以内に入ると、メニューの「着せかえ」から、棒人間の服の色を10色からえらべます(キーボードなら C)',
+    '5位より下になると、元の棒人間にもどります。また5位以内に入れば、えらんだ色がもどってきます',
+  ] },
+  { id: 5, date: '2026/11/09', title: '称号が金・銀・銅の3つになりました', items: [
+    '今期(半月ごと)のランキングで、1位は金の「第〇回王者」、2位は銀、3位は銅の称号がもらえるようになりました(第1回から)',
+    'ランキングの下に、前の期の表彰台(金・銀・銅)が出ます',
+    '称号がいくつもある人は、メニューの「称号」から、名前のとなりに出す称号をえらべます(キーボードなら T)。出さないこともできます',
+  ] },
   { id: 4, date: '2026/11/09', title: '「お知らせ」と「お問い合わせ」ができました', items: [
-    'バグの報告や「ここをこうしてほしい」、感想を、ゲームの中から送れるようになりました。タイトル画面・一時停止・結果画面の「お問い合わせ」から送れます(キーボードなら Q)',
+    'バグの報告や「ここをこうしてほしい」、感想を、ゲームの中から送れるようになりました。メニュー・一時停止・結果画面の「お問い合わせ」から送れます(キーボードなら Q)',
     '「音が出ない」「見えかた・読み上げ」のことも、えんりょなく教えてください。機種やせっていもいっしょに送れるので、原因を調べやすくなります',
     'アップデートの内容は、この「お知らせ」に書いていきます(キーボードなら I)',
   ] },
@@ -1731,7 +1811,7 @@ const NEWS = [
     'それでも鳴らないときは、マナーモード(消音)をオフにしてみてください',
   ] },
   { id: 1, date: '2026/11/01', title: '第1回シーズンがはじまりました', items: [
-    'ランキングの「今期」は半月ごと(1日〜15日 / 16日〜月末)。前の期の1位には「第〇回王者」の称号がつきます',
+    'ランキングの「今期」は半月ごと(1日〜15日 / 16日〜月末)。前の期の1位には「第〇回王者」の称号がつきます(11/9から、2位に銀・3位に銅も)',
   ] },
 ];
 const escHtml = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1740,6 +1820,9 @@ function refreshNewsBadge() {
   const unread = newsUnread();
   $('newsNew').classList.toggle('hidden', !unread);
   $('toNews').setAttribute('aria-label', unread ? 'お知らせ(新着あり)' : 'お知らせ');
+  const showMenuNew = unread && !/[?&]event(?:[=&]|$)/.test(location.search);   // 体験イベントではお知らせを出さない
+  $('menuNew').classList.toggle('hidden', !showMenuNew);
+  $('toMenu').setAttribute('aria-label', showMenuNew ? 'メニュー(お知らせに新着あり)' : 'メニュー');
 }
 function openNews(from) {
   $('newsBody').innerHTML = NEWS.map(n => `<h3><small>${escHtml(n.date)}</small>${escHtml(n.title)}</h3><ul>${n.items.map(t => `<li>${escHtml(t)}</li>`).join('')}</ul>`).join('');
@@ -1747,7 +1830,7 @@ function openNews(from) {
   refreshNewsBadge();
   show('news', from || current);
 }
-$('toNews').addEventListener('click', () => openNews('title'));
+$('toNews').addEventListener('click', () => openNews('menu'));
 refreshNewsBadge();
 
 /* =========================================================
@@ -1789,7 +1872,7 @@ function openContact(from) {
   // どこで(遊んでいる途中・結果なら、そのときの記録も)
   if (from === 'game' && G) ctWhere = `一時停止中 ${G.practice ? 'れんしゅう ' : ''}${G.i * 5}m ${G.combo}コンボ`;
   else if (from === 'result' && lastRes) ctWhere = `結果 ${lastRes.practice ? 'れんしゅう ' : ''}${lastRes.score}点 ${lastRes.dist}m 最大${lastRes.combo}コンボ`;
-  else ctWhere = { title: 'タイトル', settings: 'せってい', ranking: 'ランキング', howto: 'あそびかた', news: 'お知らせ', login: 'ログイン' }[from] || from;
+  else ctWhere = { title: 'ホーム', menu: 'メニュー', settings: 'せってい', ranking: 'ランキング', howto: 'あそびかた', news: 'お知らせ', login: 'ログイン' }[from] || from;
   const d = store.get('contactDraft', null);   // 書きかけ(この端末だけ)
   if (d && typeof d.text === 'string' && !$('ctText').value) { $('ctText').value = d.text; if (CT_HINT[d.kind]) ctKind = d.kind; }
   setCtKind(ctKind); ctCount();
@@ -1829,7 +1912,7 @@ $('ctText').addEventListener('input', () => { ctCount(); saveCtDraft(); });
 // 種類やチェックボックスで Enter を押したときに勝手に送られないように、「送る」ボタンを押したときだけ送る
 $('ctForm').addEventListener('submit', e => e.preventDefault());
 $('ctSend').addEventListener('click', sendContact);
-$('toContact').addEventListener('click', () => openContact('title'));
+$('toContact').addEventListener('click', () => openContact('menu'));
 $('resContact').addEventListener('click', () => openContact('result'));
 $('pzContact').addEventListener('click', () => openContact('game'));
 
@@ -1837,17 +1920,20 @@ $('pzContact').addEventListener('click', () => openContact('game'));
    キーボードの配置や、日本語入力がオンのときでも同じキーで動くように、文字ではなくキーの場所(e.code)で見る */
 const SHORTCUTS = [
   { code: 'KeyR', key: 'R', btn: 'againBtn', on: ['result'] },                       // もう一回
-  { code: 'KeyG', key: 'G', btn: 'startBtn', on: ['title', 'result'] },              // はじめる(本番。G は Go の G。結果画面からも、れんしゅうのあとに本番へ)
-  { code: 'KeyP', key: 'P', btn: 'practiceBtn', on: ['title'] },                     // れんしゅう
+  { code: 'KeyG', key: 'G', btn: 'startBtn', on: ['title', 'menu', 'result'] },              // はじめる(本番。G は Go の G。結果画面からも、れんしゅうのあとに本番へ)
+  { code: 'KeyP', key: 'P', btn: 'practiceBtn', on: ['title', 'menu'] },
+  { code: 'KeyN', key: 'N', btn: 'toMenu', go: () => show('menu', current), anywhere: true },   // メニュー(meNu。M はモード)                     // れんしゅう
   { code: 'KeyH', key: 'H', btn: 'resTitle', on: ['result'], go: () => show('title'), anywhere: true },   // タイトル(ホーム)
   { code: 'KeyL', key: 'L', btn: ['toRanking', 'resRanking'], go: () => openRanking(current), anywhere: true },
   { code: 'KeyS', key: 'S', btn: 'toSettings', go: () => show('settings', current), anywhere: true },
   { code: 'KeyA', key: 'A', btn: 'toHowto', go: () => show('howto', current), anywhere: true },
   { code: 'KeyM', key: 'M', btn: [], go: () => focusModes(), anywhere: true },   // モードえらびへ(ほかの画面からはタイトルへもどって)
+  { code: 'KeyC', key: 'C', btn: 'toOutfit', go: () => { if (account && CONFIG.SERVER_URL) openOutfit(current); }, anywhere: true, noEvent: true },   // 着せかえ(Clothes)
+  { code: 'KeyT', key: 'T', btn: 'toTitles', go: () => { if (account && CONFIG.SERVER_URL) openTitles(current); }, anywhere: true, noEvent: true },   // 称号(ログインしているとき)
   { code: 'KeyI', key: 'I', btn: 'toNews', go: () => openNews(current), anywhere: true, noEvent: true },                    // お知らせ(アイクエと同じ I)
   { code: 'KeyQ', key: 'Q', btn: ['toContact', 'resContact'], go: () => openContact(current), anywhere: true, noEvent: true },   // お問い合わせ(アイクエと同じ Q。体験イベントでは Q は「おわる」)
 ];
-const NAV_SCREENS = ['title', 'howto', 'settings', 'ranking', 'result', 'login', 'news', 'contact'];
+const NAV_SCREENS = ['title', 'menu', 'howto', 'settings', 'ranking', 'result', 'login', 'news', 'contact', 'titlesel', 'outfit'];
 // ボタンに、キーの印と aria-keyshortcuts(画面読み上げソフトに伝える)をつける
 // M キー:タイトルのモードえらびに飛ぶ(えらんでいるモードにフォーカス。そこで ← → で切りかえ)
 function focusModes() {
@@ -1891,7 +1977,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (sc.anywhere && sc.go) {
-    const target = { KeyM: 'modes', KeyH: 'title', KeyL: 'ranking', KeyS: 'settings', KeyA: 'howto', KeyI: 'news', KeyQ: 'contact' }[e.code];
+    const target = { KeyN: 'menu', KeyC: 'outfit', KeyT: 'titlesel', KeyM: 'modes', KeyH: 'title', KeyL: 'ranking', KeyS: 'settings', KeyA: 'howto', KeyI: 'news', KeyQ: 'contact' }[e.code];
     if (target === current) return;
     e.preventDefault(); sc.go();
   }
@@ -2044,6 +2130,7 @@ async function sendScore(data, note) {
     const res = await postScore(data);
     if (res.ok) {
       const msg = '今期 ' + res.seasonRank + '位 / 歴代 ' + res.allRank + '位' + (res.newBest ? '(自己ベスト!)' : '');
+      noteRanks(res.seasonRank, res.allRank);
       note(msg, true);
       flushPending();   // 前に送れなかったスコアがあれば、ついでに送る
     } else {
@@ -2069,7 +2156,18 @@ function openRanking(from) { show('ranking', from); loadRanking(rankMode); }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => loadRanking(t.dataset.mode)));
 $('tabSeason').addEventListener('keydown', e => { if (e.key === 'ArrowRight') $('tabAll').focus(); });
 $('tabAll').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') $('tabSeason').focus(); });
-function titleOf(nos) { return nos && nos.length ? '第' + nos[nos.length - 1] + '回王者' : ''; }
+// 称号のID 's3-1' → 第3回の1位(金)。2位は銀、3位は銅
+function titleInfo(id) {
+  const m = /^s(\d+)-([123])$/.exec(String(id || '')); if (!m) return null;
+  const no = Number(m[1]), place = Number(m[2]);
+  return { id, no, place, cls: ['', 'gold', 'silver', 'bronze'][place],
+    text: place === 1 ? '第' + no + '回王者' : '第' + no + '回 ' + (place === 2 ? '銀' : '銅'),
+    long: '第' + no + '回の' + place + '位(' + ['', '金', '銀', '銅'][place] + ')' };
+}
+function titleBadge(id) {
+  const t = titleInfo(id); if (!t) return null;
+  const b = document.createElement('span'); b.className = 'ttl ' + t.cls; b.textContent = t.text; return b;
+}
 function renderRank(list, meName, me) {
   const ol = $('rankList'); ol.innerHTML = '';
   if (!list.length) { const li = document.createElement('li'); li.style.display = 'block'; li.textContent = 'まだ記録がありません'; ol.appendChild(li); return; }
@@ -2077,7 +2175,7 @@ function renderRank(list, meName, me) {
     const li = document.createElement('li'); if (isMe) li.className = 'me';
     const no = document.createElement('span'); no.className = 'no'; no.innerHTML = '<span></span><span class="sr-only">位、</span>'; no.firstChild.textContent = e.rank;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.appendChild(document.createElement('span')).textContent = e.name;
-    const t = titleOf(e.titles); if (t) { const b = document.createElement('span'); b.className = 'ttl'; b.textContent = t; nm.appendChild(b); }
+    const tb = titleBadge(e.title); if (tb) nm.appendChild(tb);
     if (e.mode && e.mode !== 'normal' && MODE_NAME[e.mode]) { const b = document.createElement('span'); b.className = 'barmark' + (e.mode === 'nolook' ? ' nolookmark' : ''); b.textContent = MODE_NAME[e.mode]; nm.appendChild(b); }
     if (e.bar) { const b = document.createElement('span'); b.className = 'barmark'; b.textContent = 'バーあり'; nm.appendChild(b); }
     const sc = document.createElement('span'); sc.className = 'sc'; sc.innerHTML = '<span></span><small></small>';
@@ -2107,13 +2205,141 @@ async function loadRanking(mode) {
       : r.season.no < 1 ? 'プレ期間(11月1日から第1回がはじまります)'
       : '第' + r.season.no + '回(' + r.season.start + '〜' + r.season.end + ')半月ごとに新しくなります';
     renderRank(r.scores, account ? account.name : null, r.me);
-    if (r.champions && r.champions.length) {
-      const c = r.champions[0];
-      $('champText').innerHTML = '前回の王者:<span class="ttl-text"></span>';
-      $('champText').querySelector('span').textContent = '第' + c.no + '回 ' + c.name + '(' + c.score.toLocaleString() + '点)';
+    if (account && r.me && r.me.rank <= OUTFIT_TOP) setOutfitState({ ok: true });   // 5位以内なら着せかえを使える(下がったかどうかは、送ったとき・着せかえを開いたときにたしかめる)
+    // 前回(終わった期)の表彰台:金・銀・銅
+    if (r.podium && r.podium.length) {
+      $('champText').textContent = '第' + r.podium[0].no + '回の表彰台';
+      const ol = document.createElement('ol'); ol.className = 'podium';
+      r.podium.forEach(p => {
+        const li = document.createElement('li');
+        const tb = titleBadge('s' + p.no + '-' + p.place); if (tb) li.appendChild(tb);
+        const nm = document.createElement('span'); nm.textContent = p.name + '(' + p.score.toLocaleString() + '点)'; li.appendChild(nm);
+        ol.appendChild(li);
+      });
+      $('champText').appendChild(ol);
     }
   } catch (e) { $('seasonText').textContent = '通信できませんでした(' + e.message + ')'; }
 }
+
+/* ---------- 着せかえ(棒人間の服の色)。今期か歴代のランキングで5位以内の人だけ ---------- */
+const OUTFITS = [
+  { id: 'red', name: '赤', c: '#e5484d' }, { id: 'orange', name: 'オレンジ', c: '#f08c28' }, { id: 'yellow', name: '黄色', c: '#f2d43d' },
+  { id: 'green', name: '緑', c: '#3fb950' }, { id: 'sky', name: '水色', c: '#4cc2f0' }, { id: 'blue', name: '青', c: '#3d6df2' },
+  { id: 'purple', name: 'むらさき', c: '#9b5de5' }, { id: 'pink', name: 'ピンク', c: '#f272b6' }, { id: 'white', name: '白', c: '#f2f2f2' },
+  { id: 'gold', name: '金', c: '#d4a017' },
+];
+const OUTFIT_TOP = 5;
+// えらんだ色と「5位以内か」は、ログインしている名前ごとにこの端末に覚えておく
+const outfitKey = () => account ? 'outfit:' + account.name.toLowerCase() : null;
+function outfitState() { const k = outfitKey(); return (k && store.get(k, null)) || { id: '', ok: false }; }
+let outfitMemo = null;   // 毎フレーム端末の保存場所を読まないように、色はおぼえておく
+function setOutfitState(v) { const k = outfitKey(); if (k) store.set(k, Object.assign(outfitState(), v)); outfitMemo = null; }
+function outfitColor() {
+  if (C && C.hc) return '';   // ハイコントラストのときはシステムの色だけで描く
+  if (outfitMemo === null) {
+    const st = outfitState(), o = st.ok && st.id && OUTFITS.find(x => x.id === st.id);
+    outfitMemo = o ? o.c : '';
+  }
+  return outfitMemo;
+}
+// 順位がわかったときに、5位以内かを覚えなおす(スコアを送ったとき・ランキングを見たとき・着せかえを開いたとき)
+function noteRanks(seasonRank, allRank) {
+  if (!account) return;
+  const ok = (seasonRank && seasonRank <= OUTFIT_TOP) || (allRank && allRank <= OUTFIT_TOP);
+  setOutfitState({ ok: !!ok });
+}
+async function checkOutfitRank() {
+  const [a, b] = await Promise.all([apiGet({ mode: 'season', n: 1, name: account.name }), apiGet({ mode: 'all', n: 1, name: account.name })]);
+  if (!a.ok || !b.ok) throw new Error('server');
+  const sr = a.me && a.me.rank, ar = b.me && b.me.rank;
+  noteRanks(sr, ar);
+  return { sr, ar };
+}
+async function openOutfit(from) {
+  if (!account || !CONFIG.SERVER_URL) return;
+  show('outfit', from || current);
+  $('ofStatus').textContent = '順位をたしかめています…'; $('ofList').classList.add('hidden'); $('ofMsg').textContent = '';
+  drawOutfitPreview();
+  try {
+    const { sr, ar } = await checkOutfitRank();
+    const rk = '(いま 今期 ' + (sr ? sr + '位' : '記録なし') + ' / 歴代 ' + (ar ? ar + '位' : '記録なし') + ')';
+    if (!outfitState().ok) { $('ofStatus').textContent = '今期か歴代のランキングで' + OUTFIT_TOP + '位以内に入ると、棒人間の服の色を変えられます' + rk; drawOutfitPreview(); return; }
+    $('ofStatus').textContent = 'ランキング' + OUTFIT_TOP + '位以内なので、服の色を変えられます' + rk + '。5位より下になると、元の棒人間にもどります';
+    renderOutfits();
+  } catch (e) { $('ofStatus').textContent = '通信できませんでした。少したってから、もう一度開いてください'; }
+}
+function renderOutfits() {
+  const fs = $('ofList'); fs.querySelectorAll('label').forEach(l => l.remove());
+  const cur = outfitState().id || '';
+  [{ id: '', name: 'なし(いつもの棒人間)', c: '' }].concat(OUTFITS).forEach(o => {
+    const l = document.createElement('label'), r = document.createElement('input');
+    r.type = 'radio'; r.name = 'ofPick'; r.value = o.id; r.checked = o.id === cur;
+    r.addEventListener('change', () => { setOutfitState({ id: o.id }); drawOutfitPreview(); $('ofMsg').textContent = o.id ? '服を「' + o.name + '」にしました' : 'いつもの棒人間にもどしました'; });
+    const sw = document.createElement('span'); sw.className = 'swatch'; sw.setAttribute('aria-hidden', 'true'); if (o.c) sw.style.background = o.c; else sw.classList.add('none');
+    l.append(r, sw, o.name); fs.appendChild(l);
+  });
+  fs.classList.remove('hidden');
+}
+function drawOutfitPreview() {
+  const c = $('ofPreview'), dpr = Math.min(2, window.devicePixelRatio || 1), w = 120, h = 150;
+  c.width = w * dpr; c.height = h * dpr; const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = C.hc ? C.bg1 : '#13233a'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = C.rope || '#c9b48a'; g.lineWidth = 3; g.beginPath(); g.moveTo(30, 0); g.lineTo(50, 22); g.moveTo(90, 0); g.lineTo(70, 22); g.stroke();
+  g.strokeStyle = C.bar || '#E69F00'; g.lineWidth = 6; g.beginPath(); g.moveTo(40, 22); g.lineTo(80, 22); g.stroke();
+  drawStick({ x: 60, y: 22, ang: 0, mode: 'hang' }, g, outfitColor());
+}
+$('toOutfit').addEventListener('click', () => openOutfit('menu'));
+
+/* ---------- 称号えらび ---------- */
+let tsOwned = [], tsChosen = '';
+async function openTitles(from) {
+  if (!account || !CONFIG.SERVER_URL) return;
+  show('titlesel', from || current);
+  $('tsStatus').textContent = '読みこみ中…'; $('tsList').classList.add('hidden'); $('tsSave').classList.add('hidden'); $('ttlMsg').textContent = '';
+  try {
+    const r = await apiPost({ action: 'titles', name: account.name, token: account.token });
+    if (!r || !r.ok) {
+      if (r && r.error === 'bad_token') { account = null; store.del('account'); refreshAccount(); $('tsStatus').textContent = 'ログインし直してください'; return; }
+      throw new Error(r ? r.error : '');
+    }
+    tsOwned = r.owned || []; tsChosen = r.chosen || '';
+    renderTitles(r.shown);
+  } catch (e) { $('tsStatus').textContent = '通信できませんでした。少したってから、もう一度開いてください'; }
+}
+function renderTitles(shown) {
+  if (!tsOwned.length) { $('tsStatus').textContent = 'まだ称号はありません。今期のランキングで3位以内をめざそう!'; return; }
+  const now = titleInfo(shown);
+  $('tsStatus').textContent = '持っている称号:' + tsOwned.length + '個。いま出しているのは ' + (now ? now.text : 'なし');
+  // 金が上、同じ色なら新しい期が上
+  const list = tsOwned.map(titleInfo).filter(Boolean).sort((a, b) => a.place - b.place || b.no - a.no);
+  const fs = $('tsList'); fs.querySelectorAll('label').forEach(l => l.remove());
+  const add = (value, makeLabel) => {
+    const l = document.createElement('label'), r = document.createElement('input');
+    r.type = 'radio'; r.name = 'ttlPick'; r.value = value; r.checked = value === (tsChosen || 'auto');
+    l.appendChild(r); makeLabel(l); fs.appendChild(l);
+  };
+  add('auto', l => l.append('おまかせ(いちばんいい称号を自動で出す)'));
+  list.forEach(t => add(t.id, l => { l.appendChild(titleBadge(t.id)); const sr = document.createElement('span'); sr.className = 'sr-only'; sr.textContent = '、' + t.long; l.appendChild(sr); }));
+  add('none', l => l.append('称号を出さない'));
+  if (!fs.querySelector('input:checked')) fs.querySelector('input').checked = true;   // 前にえらんだ称号が、なぜかなくなっていたとき
+  fs.classList.remove('hidden'); $('tsSave').classList.remove('hidden');
+}
+async function saveTitle() {
+  const r0 = document.querySelector('input[name=ttlPick]:checked'); if (!r0 || !account) return;
+  const v = r0.value === 'auto' ? '' : r0.value, msg = $('ttlMsg');
+  $('tsSave').disabled = true; msg.textContent = '保存しています…';
+  try {
+    const r = await apiPost({ action: 'setTitle', name: account.name, token: account.token, title: v });
+    if (!r || !r.ok) throw new Error(r ? r.error : '');
+    tsOwned = r.owned || tsOwned; tsChosen = r.chosen || '';
+    const t = titleInfo(r.shown);
+    msg.textContent = t ? '「' + t.text + '」にしました。ランキングに出ます' : '称号を出さないようにしました';
+    $('tsStatus').textContent = '持っている称号:' + tsOwned.length + '個。いま出しているのは ' + (t ? t.text : 'なし');
+  } catch (e) { msg.textContent = '保存できませんでした。少したってから、もう一度おしてください'; }
+  finally { $('tsSave').disabled = false; }
+}
+$('toTitles').addEventListener('click', () => openTitles('menu'));
+$('tsSave').addEventListener('click', saveTitle);
 
 /* ---------- タイトルのボタン ---------- */
 $('startBtn').addEventListener('click', () => newGame(false));
@@ -2126,8 +2352,9 @@ $('practiceBtn').addEventListener('click', () => {
   if (cb > 0) { G.combo = cb; G.maxCombo = cb; G.catches = 60; G.score = cb * 1000; updateHud(); }
 });
 $('toRanking').addEventListener('click', () => openRanking('title'));
-$('toHowto').addEventListener('click', () => show('howto', 'title'));
-$('toSettings').addEventListener('click', () => show('settings', 'title'));
+$('toMenu').addEventListener('click', () => show('menu', 'title'));
+$('toHowto').addEventListener('click', () => show('howto', 'menu'));
+$('toSettings').addEventListener('click', () => show('settings', 'menu'));
 /* =========================================================
    体験イベント用(URLの最後に ?event をつける。?event=3 なら3分)
    ・「はじめる」(または「れんしゅう」)を最初に押したときから時間を数える
