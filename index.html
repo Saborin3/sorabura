@@ -45,6 +45,23 @@ a.btn:focus-visible,.btn:focus-visible,input:focus-visible,.tab:focus-visible{ou
 .note{font-size:14px;color:var(--sub);text-align:center}
 .panel{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px 16px}
 label.field{display:flex;flex-direction:column;gap:6px;font-size:16px}
+/* お知らせ・お問い合わせ */
+.new-badge{display:inline-block;margin-left:.4em;padding:0 .45em;border-radius:8px;background:var(--crit);color:#000;font-size:.75em;font-weight:bold;line-height:1.5;vertical-align:.1em}
+.news-list h3{font-size:17px;margin:14px 0 4px}.news-list h3:first-child{margin-top:0}
+.news-list h3 small{display:block;font-size:13px;font-weight:normal;color:var(--sub)}
+.news-list ul{margin:0 0 4px;padding-left:1.3em;line-height:1.7}
+.ct-kinds{display:grid;grid-template-columns:1fr 1fr}.ct-kinds label:last-child{grid-column:1/-1}.ct-kinds span b{font-size:15px}
+.ct-kinds span{min-height:44px;justify-content:center}
+textarea#ctText{width:100%;box-sizing:border-box;min-height:140px;resize:vertical;font:inherit;font-size:17px;line-height:1.6;padding:12px;border-radius:10px;border:2px solid var(--line);background:#0b1726;color:var(--ink)}
+textarea#ctText:focus-visible{outline:4px solid var(--crit);outline-offset:2px}
+.ct-count{text-align:right;font-size:13px;color:var(--sub);margin-top:-6px}
+label.ct-info{display:flex;gap:10px;align-items:flex-start;font-size:15px;cursor:pointer}
+label.ct-info input{width:22px;height:22px;flex:none;margin-top:2px}
+#ctInfoText{font-size:12px;color:var(--sub);word-break:break-all;margin:2px 0 0 32px}
+.ct-hint{text-align:left;margin:-4px 0 0}
+#ctInfoWhy{margin:4px 0 0 32px}
+#ctMsg{min-height:1.5em;text-align:center;font-weight:bold}
+#ctMsg.bad{color:var(--miss, #ff8a80)}#ctMsg.good{color:var(--nice, #8fe388)}
 input[type=text],input[type=password]{font:inherit;font-size:18px;padding:12px;border-radius:10px;border:2px solid var(--line);background:#0b1726;color:var(--ink)}
 .set{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:17px}
 .set:last-child{border-bottom:0}
@@ -113,13 +130,13 @@ h2[tabindex="-1"]:focus{outline:none}  /* 読み上げ用に見出しへ移す�
 .modes legend{font-size:14px;color:var(--sub);padding:0 4px}
 .modes label{flex:1;position:relative;cursor:pointer}
 .modes input{position:absolute;opacity:0;width:1px;height:1px}
-.modes span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:2px solid var(--line);background:var(--panel);text-align:center}
+.modes label>span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:2px solid var(--line);background:var(--panel);text-align:center}
 .modes span b{font-size:16px}
 .modes span small{font-size:11px;color:var(--sub);line-height:1.3}
 .modes input:checked + span{border:3px solid var(--accent);background:var(--panel2)}
 .modes input:checked + span{box-shadow:inset 0 -4px 0 var(--accent)}   /* えらんでいるものは枠と下線で(読み上げに「●」が入らないように文字は足さない) */
 .modes input:focus-visible + span{outline:4px solid var(--crit);outline-offset:2px}
-html.hc-dark .modes, html.hc-dark .modes span{background:#000;color:#fff;border-color:#fff}
+html.hc-dark .modes, html.hc-dark .modes label>span{background:#000;color:#fff;border-color:#fff}
 html.hc-dark .modes input:checked + span{border:4px solid #ff0;color:#ff0}
 html.hc-dark .modes span small, html.hc-dark .modes legend{color:#fff}
 /* ノールック:ゲーム画面はまっ黒。スコアなどの表示も消す(一時停止と「はなす」ボタンだけ残す) */
@@ -152,7 +169,11 @@ html.hc-dark .ttl-text{color:#ff0}
 html.hc-dark .barmark{color:#fff;border-color:#fff}
 html.hc-dark .barmark.nolookmark{background:#000;color:#0ff;border:2px solid #0ff}
 @media (forced-colors:active){ .barmark.nolookmark{border-width:2px} }   /* Windowsの色に合わせるときは、色ではなく太い枠と太字で区別 */
-html.hc-dark input[type=text], html.hc-dark input[type=password]{background:#000;color:#fff;border:2px solid #fff}
+html.hc-dark input[type=text], html.hc-dark input[type=password], html.hc-dark textarea#ctText{background:#000;color:#fff;border:2px solid #fff}
+html.hc-dark .new-badge{background:#ff0;color:#000}
+html.hc-dark .news-list h3 small, html.hc-dark .ct-count, html.hc-dark #ctInfoText{color:#fff}
+html.hc-dark #ctMsg.bad, html.hc-dark #ctMsg.good{color:#ff0}
+@media (forced-colors:active){ .new-badge{border:1px solid CanvasText} textarea#ctText{border:2px solid CanvasText} }
 html.hc-dark input[type=checkbox], html.hc-dark input[type=range]{accent-color:#ff0}
 html.hc-dark #pauseBtn{background:#000;color:#fff;border:2px solid #fff}
 html.hc-dark #releaseBtn{background:#000;color:#ff0;border:4px solid #ff0;box-shadow:none}
@@ -194,7 +215,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
     <div class="account" id="accountBox"><span id="accountText">ゲストで遊んでいます</span>
       <button class="btn ghost small" id="toLogin">ログイン</button></div>
     <fieldset class="modes" id="modeBox">
-      <legend>あそびかたのモード</legend>
+      <legend>あそびかたのモード<span class="kbd" aria-hidden="true">M</span></legend>
       <label><input type="radio" name="mode" value="normal"><span><b>ふつう</b><small>音と絵の両方</small></span></label>
       <label><input type="radio" name="mode" value="nolook"><span><b>ノールック</b><small>音だけ</small></span></label>
       <label><input type="radio" name="mode" value="silent"><span><b>サイレント</b><small>絵だけ</small></span></label>
@@ -219,7 +240,11 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <button class="btn ghost" id="toRanking">ランキング</button>
       <button class="btn ghost" id="toHowto">あそびかた</button>
     </div>
-    <button class="btn ghost" id="toSettings">せってい</button>
+    <div class="row">
+      <button class="btn ghost" id="toSettings">せってい</button>
+      <button class="btn ghost no-event" id="toNews">お知らせ<span class="new-badge hidden" id="newsNew" aria-hidden="true">新着</span></button>
+    </div>
+    <button class="btn ghost no-event" id="toContact">お問い合わせ(バグ・要望・感想)</button>
     <a class="btn ghost" href="https://saborin3.github.io/">saborinのほかの作品</a>
     <p class="note">音と絵の両方で「はなすタイミング」がわかります。<br>スペースキー・Enter・画面タップで手をはなします。<br>スマホは縦向きがおすすめ。</p>
     <p class="note vo-note">VoiceOverをお使いの方は、「はじめる」を押してからVoiceOverをお切りください。</p>
@@ -257,7 +282,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <li><b>スロー</b>:100コンボをこえると、ときどき「カチッ・カチッ」と鳴って、ブランコがゆっくりになります(画面のふちが青くなり、左上に「スロー」と出ます)。何本かつかまると「ピッ」と鳴って、元の速さにもどります。リズムがくずれるので注意!</li>
       <li><b>鳥</b>:50コンボをこえると、ときどき大きな青い鳥がブランコの手前を飛んできて、「ピチュピチュ」とさえずったり、上のランプや「ここ」マークをかくしたりして、じゃまをします。「キン!」の瞬間だけは鳴かないので、落ち着いて。</li>
       <li>スペースキー・Enter・画面のどこかをタップ・「はなす」ボタン、どれでもOK。</li>
-      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、Esc でもどる。一時停止中は H でタイトルへ。せっていでオフにできます。</li>
+      <li><b>キーボードのショートカット</b>:ゲーム中は S でスコアを読み上げ、Esc で一時停止。ゲームの外では G ではじめる、R でもう一回、P でれんしゅう、M でモードえらびへ、H でタイトル(ホーム)、L でランキング、S でせってい、A であそびかた、I でお知らせ、Q でお問い合わせ、Esc でもどる。一時停止中は H でタイトルへ、Q でお問い合わせ。せっていでオフにできます。</li>
     </ol></div>
     <div class="panel">
       <p><b>モード</b>(タイトル画面でえらべます)</p>
@@ -316,6 +341,42 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
   </div>
 </section>
 
+<!-- お知らせ(アップデート情報)。中身は script の NEWS に書く -->
+<section id="news" class="screen hidden" aria-labelledby="newsH">
+  <div class="card">
+    <h2 id="newsH">お知らせ</h2>
+    <div class="panel news-list" id="newsBody"></div>
+    <button class="btn" data-back>もどる</button>
+  </div>
+</section>
+<!-- お問い合わせ(バグ報告・要望・感想)。サーバーのシート「contact」に届く -->
+<section id="contact" class="screen hidden" aria-labelledby="ctH">
+  <form class="card" id="ctForm" novalidate>
+    <h2 id="ctH">お問い合わせ</h2>
+    <p class="note" style="text-align:left">バグの報告、「ここをこうしてほしい」、感想など、なんでも送ってください。作った人が読んで、ゲームをよくするのに使います。</p>
+    <fieldset class="modes ct-kinds" id="ctKinds">
+      <legend>種類</legend>
+      <label><input type="radio" name="ctKind" value="bug"><span><b>バグ・不具合</b></span></label>
+      <label><input type="radio" name="ctKind" value="sound"><span><b>音が出ない・聞こえにくい</b></span></label>
+      <label><input type="radio" name="ctKind" value="access"><span><b>見えかた・読み上げ</b></span></label>
+      <label><input type="radio" name="ctKind" value="idea"><span><b>改善してほしい</b></span></label>
+      <label><input type="radio" name="ctKind" value="other"><span><b>感想・その他</b></span></label>
+    </fieldset>
+    <label class="field" for="ctText"><b>内容</b></label>
+    <p class="note ct-hint" id="ctHint"></p>
+    <textarea id="ctText" maxlength="1000" aria-describedby="ctHint ctCountWrap"></textarea>
+    <div class="ct-count" id="ctCountWrap"><span id="ctCount">0</span> / 1000文字</div>
+    <div>
+      <label class="ct-info"><input type="checkbox" id="ctInfo" checked aria-describedby="ctInfoWhy ctInfoText"><span>ゲームの情報もいっしょに送る</span></label>
+      <p class="note ct-hint" id="ctInfoWhy">機種・ブラウザ・モード・せってい・音の状態など。原因を調べるのに役立ちます。送る内容:</p>
+      <p id="ctInfoText"></p>
+    </div>
+    <p class="note" style="text-align:left">※名前・メールアドレス・学校名など、個人がわかることは書かないでください。返事は「お知らせ」やアップデートでします。</p>
+    <p id="ctMsg" role="status"></p>
+    <button class="btn" type="button" id="ctSend">送る</button>
+    <button class="btn ghost" type="button" data-back>もどる</button>
+  </form>
+</section>
 <!-- ゲーム -->
 <section id="game" class="screen hidden" aria-label="ゲーム">
   <div id="stage" tabindex="0" role="application" aria-label="ゲーム画面。音がだんだん高くなり、いちばん高い「キン」の音で、スペースキーかEnterで手をはなします。Sキーでスコアときょりを読み上げ。Escで一時停止。">
@@ -335,6 +396,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <h2 id="ovH">一時停止</h2>
       <button class="btn" id="resumeBtn">つづける</button>
       <button class="btn ghost" id="quitBtn">タイトルへ</button>
+      <button class="btn ghost no-event" id="pzContact">お問い合わせ</button>
     </div>
   </div>
 </section>
@@ -378,6 +440,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <button class="btn ghost" id="resRanking">ランキング</button>
       <button class="btn ghost" id="resTitle">タイトルへ</button>
     </div>
+    <button class="btn ghost no-event" id="resContact">お問い合わせ(バグ・要望・感想)</button>
     <a class="btn ghost" href="https://saborin3.github.io/">saborinのほかの作品</a>
   </div>
 </section>
@@ -669,16 +732,25 @@ function swingStop() { if (swing) { try { swing.s.stop(); } catch (e) {} swing =
 /* =========================================================
    画面の切りかえ
    ========================================================= */
-const screens = ['title', 'login', 'howto', 'settings', 'ranking', 'game', 'result', 'eventEnd'];
+const screens = ['title', 'login', 'howto', 'settings', 'ranking', 'news', 'contact', 'game', 'result', 'eventEnd'];
 let current = 'title', backTo = 'title';
 function show(id, from) {
   screens.forEach(s => $(s).classList.toggle('hidden', s !== id));
   if (from) backTo = from;
   current = id;
-  const focusEl = { title: $('startBtn'), login: $('nameIn'), howto: $('howH'), settings: $('setH'), ranking: $('tabSeason'), game: $('stage'), result: $('resH'), eventEnd: $('evH') }[id];
+  const focusEl = { title: $('startBtn'), login: $('nameIn'), howto: $('howH'), settings: $('setH'), ranking: $('tabSeason'), news: $('newsH'), contact: $('ctH'), game: $('stage'), result: $('resH'), eventEnd: $('evH') }[id];
   if (focusEl) { if (!focusEl.hasAttribute('tabindex') && /^H\d/.test(focusEl.tagName)) focusEl.setAttribute('tabindex', '-1'); setTimeout(() => focusEl.focus(), 30); }
 }
-document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => show(backTo === current ? 'title' : backTo)));
+document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => goBack()));
+function goBack() {
+  const to = backTo === current ? 'title' : backTo;
+  // 一時停止からお問い合わせを開いたときは、一時停止の画面にもどる(ゲームは止まったまま)
+  if (to === 'game') {
+    if (G && G.paused) { show('game'); setTimeout(() => $('resumeBtn').focus(), 40); return; }
+    return show('title');
+  }
+  show(to);
+}
 
 function refreshAccount() {
   $('accountText').innerHTML = account ? 'ログイン中:<b></b>' : 'ゲストで遊んでいます';
@@ -1640,6 +1712,127 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* =========================================================
+   お知らせ(アップデート情報)
+   新しいお知らせは、いちばん上に足す。id は前のより大きい数字にすると、タイトルの「お知らせ」に「新着」が出る
+   ========================================================= */
+const NEWS = [
+  { id: 4, date: '2026/11/09', title: '「お知らせ」と「お問い合わせ」ができました', items: [
+    'バグの報告や「ここをこうしてほしい」、感想を、ゲームの中から送れるようになりました。タイトル画面・一時停止・結果画面の「お問い合わせ」から送れます(キーボードなら Q)',
+    '「音が出ない」「見えかた・読み上げ」のことも、えんりょなく教えてください。機種やせっていもいっしょに送れるので、原因を調べやすくなります',
+    'アップデートの内容は、この「お知らせ」に書いていきます(キーボードなら I)',
+  ] },
+  { id: 3, date: '2026/11/07', title: 'キーボードのショートカットができました', items: [
+    'ゲームの外で、G ではじめる、R でもう一回、P でれんしゅう、H でタイトル、L でランキング、S でせってい、A であそびかた、Esc でもどる',
+    'ボタンにキーの印が出ます。画面読み上げソフトのキーとぶつかるときは、せっていでオフにできます',
+  ] },
+  { id: 2, date: '2026/11/05', title: 'スマホで音が止まりにくくしました', items: [
+    'iPhoneで、ゲーム中の声のあとに効果音が止まることがあったので、自動で音をもどすようにしました。止まっていたあいだの合図は鳴らさず、もどってから合図をやり直します',
+    'それでも鳴らないときは、マナーモード(消音)をオフにしてみてください',
+  ] },
+  { id: 1, date: '2026/11/01', title: '第1回シーズンがはじまりました', items: [
+    'ランキングの「今期」は半月ごと(1日〜15日 / 16日〜月末)。前の期の1位には「第〇回王者」の称号がつきます',
+  ] },
+];
+const escHtml = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function newsUnread() { return NEWS.length > 0 && NEWS[0].id > (Number(store.get('newsSeen', 0)) || 0); }
+function refreshNewsBadge() {
+  const unread = newsUnread();
+  $('newsNew').classList.toggle('hidden', !unread);
+  $('toNews').setAttribute('aria-label', unread ? 'お知らせ(新着あり)' : 'お知らせ');
+}
+function openNews(from) {
+  $('newsBody').innerHTML = NEWS.map(n => `<h3><small>${escHtml(n.date)}</small>${escHtml(n.title)}</h3><ul>${n.items.map(t => `<li>${escHtml(t)}</li>`).join('')}</ul>`).join('');
+  if (NEWS.length) store.set('newsSeen', NEWS[0].id);
+  refreshNewsBadge();
+  show('news', from || current);
+}
+$('toNews').addEventListener('click', () => openNews('title'));
+refreshNewsBadge();
+
+/* =========================================================
+   お問い合わせ(バグ報告・要望・感想)。アイクエと同じしくみで、サーバーのシート「contact」に届く
+   ========================================================= */
+const CT_HINT = {
+  bug: 'どこで・何をしたら・どうなったかを書いてください(例:結果画面で「もう一回」を押したら、画面がまっ黒のまま動かない)',
+  sound: 'いつ・どの音が出ないか、聞こえにくいかを書いてください(例:最初は鳴るのに、2つ目のブランコから「キン!」が鳴らない。マナーモードはオフ)',
+  access: '見えにくいところ・読み上げで困ったところを書いてください(例:NVDAで結果の点数が読まれない、ハイコントラストでボタンが見えない)',
+  idea: 'どこを・どうしてほしいかを書いてください(例:強風の音をもっと大きくしてほしい)',
+  other: '感想・応援・遊んでみて思ったこと、なんでもどうぞ',
+};
+let ctKind = 'bug', ctWhere = '', ctBusy = false;
+const recentErrors = [];
+window.addEventListener('error', e => { recentErrors.push(String((e && e.message) || e).slice(0, 80)); if (recentErrors.length > 3) recentErrors.shift(); });
+// いっしょに送るゲームの情報(送る前に画面にも見せる)。個人がわかるものは入れない
+function ctInfo() {
+  const ua = navigator.userAgent;
+  const ios = /\b(?:iPhone|iPad|iPod).*? OS (\d+)[_.](\d+)/.exec(ua);
+  const os = ios ? 'iOS ' + ios[1] + '.' + ios[2]
+    : /iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1 ? 'iPadOS'
+    : /Android ([\d.]+)/.test(ua) ? 'Android ' + /Android ([\d.]+)/.exec(ua)[1]
+    : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'その他';
+  const br = /Edg\//.test(ua) ? 'Edge' : /CriOS/.test(ua) ? 'Chrome(iOS)' : /FxiOS/.test(ua) ? 'Firefox(iOS)' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'その他';
+  const onoff = v => v ? 'オン' : 'オフ';
+  const mode = { normal: 'ふつう', nolook: 'ノールック', silent: 'サイレント' }[settings.mode] || settings.mode;
+  const parts = [os, br, `画面 ${innerWidth}x${innerHeight}`, `モード ${mode}`,
+    `音量 ${Math.round(settings.vol * 100)}%`, `声 ${onoff(settings.voice)}`, `バー ${onoff(settings.bar)}`, `補正 ${settings.offset}ms`,
+    `音 ${ac ? ac.state : 'まだ'}`];
+  if (hcMq && hcMq.matches) parts.push('ハイコントラスト');
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) parts.push('動きを減らす(OS)');
+  if (settings.calm) parts.push('動きを減らす');
+  if (!settings.keys) parts.push('ショートカットオフ');
+  if (recentErrors.length) parts.push('エラー: ' + recentErrors.join(' | '));
+  return parts.join(' / ');
+}
+function openContact(from) {
+  from = from || current;
+  // どこで(遊んでいる途中・結果なら、そのときの記録も)
+  if (from === 'game' && G) ctWhere = `一時停止中 ${G.practice ? 'れんしゅう ' : ''}${G.i * 5}m ${G.combo}コンボ`;
+  else if (from === 'result' && lastRes) ctWhere = `結果 ${lastRes.practice ? 'れんしゅう ' : ''}${lastRes.score}点 ${lastRes.dist}m 最大${lastRes.combo}コンボ`;
+  else ctWhere = { title: 'タイトル', settings: 'せってい', ranking: 'ランキング', howto: 'あそびかた', news: 'お知らせ', login: 'ログイン' }[from] || from;
+  const d = store.get('contactDraft', null);   // 書きかけ(この端末だけ)
+  if (d && typeof d.text === 'string' && !$('ctText').value) { $('ctText').value = d.text; if (CT_HINT[d.kind]) ctKind = d.kind; }
+  setCtKind(ctKind); ctCount();
+  $('ctInfoText').textContent = `どこで:${ctWhere} / ${ctInfo()}`;
+  $('ctMsg').textContent = ''; $('ctMsg').className = '';
+  show('contact', from);
+}
+function setCtKind(k) {
+  ctKind = CT_HINT[k] ? k : 'bug';
+  document.querySelectorAll('input[name=ctKind]').forEach(r => { r.checked = r.value === ctKind; });
+  $('ctHint').textContent = CT_HINT[ctKind];
+}
+function ctCount() { $('ctCount').textContent = $('ctText').value.length; }
+function saveCtDraft() { store.set('contactDraft', { kind: ctKind, text: $('ctText').value }); }
+async function sendContact() {
+  if (ctBusy) return;
+  const text = $('ctText').value.trim(), msg = $('ctMsg');
+  const bad = t => { msg.textContent = t; msg.className = 'bad'; };
+  if (text.length < 2) { bad('内容を書いてください'); $('ctText').focus(); return; }
+  if (!CONFIG.SERVER_URL) { bad('この版はサーバーにつながっていないので、送れません'); return; }
+  if (!navigator.onLine) { bad('インターネットにつながっていません。書いた内容は残してあるので、つながったらもう一度送ってください'); return; }
+  const body = { action: 'contact', kind: ctKind, text };
+  if ($('ctInfo').checked) { body.where = ctWhere; body.info = ctInfo(); body.platform = /iPhone|iPad|Android|Mobile/.test(navigator.userAgent) ? 'スマホ' : 'PC'; }
+  if (account) { body.name = account.name; body.token = account.token; }
+  ctBusy = true; $('ctSend').disabled = true; msg.textContent = '送っています…'; msg.className = '';
+  try {
+    const res = await apiPost(body);
+    if (!res || !res.ok) { bad(res && res.error === 'busy' ? '今は混んでいるか、送る回数が多すぎます。少し時間をおいて、もう一度送ってください(書いた内容は残してあります)' : '送れませんでした。書いた内容は残してあるので、もう一度送ってください'); return; }
+    $('ctText').value = ''; ctCount(); store.set('contactDraft', null);
+    msg.textContent = '送りました。ありがとう!ちゃんと読みます'; msg.className = 'good';
+  } catch (e) {
+    bad('サーバーにつながりませんでした。書いた内容は残してあるので、あとでもう一度送ってください');
+  } finally { ctBusy = false; $('ctSend').disabled = false; }
+}
+document.querySelectorAll('input[name=ctKind]').forEach(r => r.addEventListener('change', () => { setCtKind(r.value); saveCtDraft(); }));
+$('ctText').addEventListener('input', () => { ctCount(); saveCtDraft(); });
+// 種類やチェックボックスで Enter を押したときに勝手に送られないように、「送る」ボタンを押したときだけ送る
+$('ctForm').addEventListener('submit', e => e.preventDefault());
+$('ctSend').addEventListener('click', sendContact);
+$('toContact').addEventListener('click', () => openContact('title'));
+$('resContact').addEventListener('click', () => openContact('result'));
+$('pzContact').addEventListener('click', () => openContact('game'));
+
 /* ---------- ショートカットキー(ゲームの外と、一時停止中) ----------
    キーボードの配置や、日本語入力がオンのときでも同じキーで動くように、文字ではなくキーの場所(e.code)で見る */
 const SHORTCUTS = [
@@ -1650,9 +1843,17 @@ const SHORTCUTS = [
   { code: 'KeyL', key: 'L', btn: ['toRanking', 'resRanking'], go: () => openRanking(current), anywhere: true },
   { code: 'KeyS', key: 'S', btn: 'toSettings', go: () => show('settings', current), anywhere: true },
   { code: 'KeyA', key: 'A', btn: 'toHowto', go: () => show('howto', current), anywhere: true },
+  { code: 'KeyM', key: 'M', btn: [], go: () => focusModes(), anywhere: true },   // モードえらびへ(ほかの画面からはタイトルへもどって)
+  { code: 'KeyI', key: 'I', btn: 'toNews', go: () => openNews(current), anywhere: true, noEvent: true },                    // お知らせ(アイクエと同じ I)
+  { code: 'KeyQ', key: 'Q', btn: ['toContact', 'resContact'], go: () => openContact(current), anywhere: true, noEvent: true },   // お問い合わせ(アイクエと同じ Q。体験イベントでは Q は「おわる」)
 ];
-const NAV_SCREENS = ['title', 'howto', 'settings', 'ranking', 'result', 'login'];
+const NAV_SCREENS = ['title', 'howto', 'settings', 'ranking', 'result', 'login', 'news', 'contact'];
 // ボタンに、キーの印と aria-keyshortcuts(画面読み上げソフトに伝える)をつける
+// M キー:タイトルのモードえらびに飛ぶ(えらんでいるモードにフォーカス。そこで ← → で切りかえ)
+function focusModes() {
+  const go = () => { const r = document.querySelector('input[name=mode]:checked') || document.querySelector('input[name=mode]'); if (r) { r.focus(); r.closest('label').scrollIntoView({ block: 'nearest' }); } };
+  if (current !== 'title') { show('title'); setTimeout(go, 60); } else go();
+}
 function markKeys() {
   document.documentElement.classList.toggle('no-keys', !settings.keys);
   const put = (id, key) => {
@@ -1661,31 +1862,36 @@ function markKeys() {
     if (!b.querySelector('.kbd')) { const k = document.createElement('span'); k.className = 'kbd'; k.setAttribute('aria-hidden', 'true'); k.textContent = key; b.appendChild(k); }
   };
   SHORTCUTS.forEach(s => [].concat(s.btn).forEach(id => put(id, s.key)));
-  put('quitBtn', 'H');
+  put('quitBtn', 'H'); put('pzContact', 'Q');
+  document.querySelectorAll('input[name=mode]').forEach(r => { if (settings.keys) r.setAttribute('aria-keyshortcuts', 'M'); else r.removeAttribute('aria-keyshortcuts'); });
   document.querySelectorAll('[data-back]').forEach(b => { if (settings.keys) b.setAttribute('aria-keyshortcuts', 'Escape'); else b.removeAttribute('aria-keyshortcuts'); });
 }
 markKeys();
 document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.altKey || e.metaKey || e.isComposing || e.repeat) return;
   const el = document.activeElement, tag = el && el.tagName;
+  // お問い合わせを書いているとき:Esc でもどる(書きかけは残る)。ほかのキーは文字として入力する
+  if (tag === 'TEXTAREA') { if (e.key === 'Escape' && current === 'contact') { e.preventDefault(); goBack(); } return; }
   // 名前やパスワードを入力しているときは、文字として入力する
-  if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(el.type))) return;
+  if (tag === 'SELECT' || (tag === 'INPUT' && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(el.type))) return;
   // 一時停止中:H でタイトルへ
   if (current === 'game') {
     if (settings.keys && G && G.paused && e.code === 'KeyH') { e.preventDefault(); $('quitBtn').click(); }
+    if (settings.keys && G && G.paused && e.code === 'KeyQ' && !EVENT && $('overlay') && !$('overlay').classList.contains('hidden')) { e.preventDefault(); openContact('game'); }
     return;
   }
   if (!NAV_SCREENS.includes(current)) return;   // 体験イベントの「体験おわり」画面などでは使わない
   // Esc:もどる(Backspace は、ブラウザによっては前のページにもどってしまうので使わない)
   if (e.key === 'Escape') { const b = $(current) && $(current).querySelector('[data-back]'); if (b) { e.preventDefault(); b.click(); } return; }
-  if (!settings.keys || current === 'login') return;   // ログイン画面は名前を打つところなので、文字のキーは使わない
+  if (!settings.keys || current === 'login' || current === 'contact') return;   // ログイン・お問い合わせは文字を打つところなので、文字のキーは使わない
   const sc = SHORTCUTS.find(s => s.code === e.code); if (!sc) return;
+  if (sc.noEvent && EVENT) return;   // 体験イベントでは、お知らせ・お問い合わせは出さない
   if (sc.on && sc.on.includes(current)) {
     const b = $(sc.btn); if (b && !b.disabled && !b.classList.contains('hidden')) { e.preventDefault(); b.click(); }
     return;
   }
   if (sc.anywhere && sc.go) {
-    const target = { KeyH: 'title', KeyL: 'ranking', KeyS: 'settings', KeyA: 'howto' }[e.code];
+    const target = { KeyM: 'modes', KeyH: 'title', KeyL: 'ranking', KeyS: 'settings', KeyA: 'howto', KeyI: 'news', KeyQ: 'contact' }[e.code];
     if (target === current) return;
     e.preventDefault(); sc.go();
   }
@@ -1794,7 +2000,9 @@ function tauntFor(dist, bestDist, isNewBest, lastMiss) {
   return { main, sub };
 }
 
+let lastRes = null;
 async function showResult(r) {
+  lastRes = r;
   if (EVENT) { evRecord(r); if (EV.over) { evShowEnd(); return; } }
   lastPractice = r.practice;
   guestScore = null; $('registerBtn').classList.add('hidden');
@@ -2025,7 +2233,7 @@ if (EVENT) {
   $('toLogin').classList.add('hidden');
   $('registerBtn').style.display = 'none';
   // 共用の端末なので、ほかのページに行ってしまわないように、外へのリンクはかくす(体験おわり画面に URL は出している)
-  document.querySelectorAll('a.btn[href^="http"]').forEach(x => { x.hidden = true; x.style.display = 'none'; });
+  document.querySelectorAll('a.btn[href^="http"], .no-event').forEach(x => { x.hidden = true; x.style.display = 'none'; });
   $('evNote').textContent = '体験版:「はじめる」を押すと ' + EVENT.min + '分スタート!';
   $('evNote').classList.remove('hidden');
   // 再読みこみしても、時間は続きから
