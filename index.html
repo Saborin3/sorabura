@@ -50,8 +50,21 @@ label.field{display:flex;flex-direction:column;gap:6px;font-size:16px}
 .news-list h3{font-size:17px;margin:14px 0 4px}.news-list h3:first-child{margin-top:0}
 .news-list h3 small{display:block;font-size:13px;font-weight:normal;color:var(--sub)}
 .news-list ul{margin:0 0 4px;padding-left:1.3em;line-height:1.7}
-.ct-kinds{display:grid;grid-template-columns:1fr 1fr}.ct-kinds label:last-child{grid-column:1/-1}.ct-kinds span b{font-size:15px}
-.ct-kinds span{min-height:44px;justify-content:center}
+.ct-kinds{border:2px solid var(--line);border-radius:12px;padding:6px 10px 10px;margin:0}
+.ct-kinds legend{font-size:14px;color:var(--sub);padding:0 4px}
+.ct-kind-list{display:flex;flex-direction:column;gap:8px}
+.ct-kind-list label{display:block;cursor:pointer}
+.ct-kind-list input{position:absolute;opacity:0;width:1px;height:1px}
+.ct-kind-list label>span{display:flex;align-items:center;gap:12px;min-height:50px;padding:8px 14px;border-radius:10px;border:2px solid var(--line);background:var(--panel);font-size:16px;font-weight:bold;text-align:left}
+.ct-kind-list label>span::before{content:"";flex:none;width:20px;height:20px;border-radius:50%;border:2px solid currentColor;box-sizing:border-box}
+.ct-kind-list input:checked + span{border:3px solid var(--accent);background:var(--panel2)}
+.ct-kind-list input:checked + span::before{background:currentColor;box-shadow:inset 0 0 0 4px var(--panel2)}
+.ct-kind-list input:focus-visible + span{outline:4px solid var(--crit);outline-offset:2px}
+html.hc-dark .ct-kinds, html.hc-dark .ct-kind-list label>span{background:#000;color:#fff;border-color:#fff}
+html.hc-dark .ct-kinds legend{color:#fff}
+html.hc-dark .ct-kind-list input:checked + span{border:4px solid #ff0;color:#ff0}
+html.hc-dark .ct-kind-list input:checked + span::before{box-shadow:inset 0 0 0 4px #000}
+@media (forced-colors:active){ .ct-kind-list input:checked + span{border-width:5px} .ct-kind-list input:checked + span::before{forced-color-adjust:none;background:Highlight;border-color:Highlight} }
 textarea#ctText{width:100%;box-sizing:border-box;min-height:140px;resize:vertical;font:inherit;font-size:17px;line-height:1.6;padding:12px;border-radius:10px;border:2px solid var(--line);background:#0b1726;color:var(--ink)}
 textarea#ctText:focus-visible{outline:4px solid var(--crit);outline-offset:2px}
 .ct-count{text-align:right;font-size:13px;color:var(--sub);margin-top:-6px}
@@ -414,13 +427,15 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
   <form class="card" id="ctForm" novalidate>
     <h2 id="ctH">お問い合わせ</h2>
     <p class="note" style="text-align:left">バグの報告、「ここをこうしてほしい」、感想など、なんでも送ってください。作った人が読んで、ゲームをよくするのに使います。</p>
-    <fieldset class="modes ct-kinds" id="ctKinds">
+    <fieldset class="ct-kinds" id="ctKinds">
       <legend>種類</legend>
-      <label><input type="radio" name="ctKind" value="bug"><span><b>バグ・不具合</b></span></label>
-      <label><input type="radio" name="ctKind" value="sound"><span><b>音が出ない・聞こえにくい</b></span></label>
-      <label><input type="radio" name="ctKind" value="access"><span><b>見えかた・読み上げ</b></span></label>
-      <label><input type="radio" name="ctKind" value="idea"><span><b>改善してほしい</b></span></label>
-      <label><input type="radio" name="ctKind" value="other"><span><b>感想・その他</b></span></label>
+      <div class="ct-kind-list">
+        <label><input type="radio" name="ctKind" value="bug"><span><b>バグ・不具合</b></span></label>
+        <label><input type="radio" name="ctKind" value="sound"><span><b>音が出ない・聞こえにくい</b></span></label>
+        <label><input type="radio" name="ctKind" value="access"><span><b>見えかた・読み上げ</b></span></label>
+        <label><input type="radio" name="ctKind" value="idea"><span><b>改善してほしい</b></span></label>
+        <label><input type="radio" name="ctKind" value="other"><span><b>感想・その他</b></span></label>
+      </div>
     </fieldset>
     <label class="field" for="ctText"><b>内容</b></label>
     <p class="note ct-hint" id="ctHint"></p>
@@ -1724,6 +1739,8 @@ function drawStick(P, g = ctx, shirt = outfitColor()) {
   let H = { x: P.x, y: P.y };
   if (P.mode === 'lie') H = { x: P.x - 50, y: P.y };
   const sh = at(H, 30), head = at(H, 15), hip = at(H, 74);
+  const side = (b, k) => ({ x: b.x + n.x * k, y: b.y + n.y * k });
+  const hands = [side(H, 10), side(H, -10)], elbows = [side(at(H, 28), 15), side(at(H, 28), -15)];
   g.strokeStyle = C.ink; g.fillStyle = C.ink; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';
   const line = (a, b, c) => { g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); if (c) g.lineTo(c.x, c.y); g.stroke(); };
   // うで
@@ -1731,13 +1748,15 @@ function drawStick(P, g = ctx, shirt = outfitColor()) {
     const a1 = rot(d, -2.2), a2 = rot(d, 2.2);
     line(sh, { x: sh.x + a1.x * 34, y: sh.y + a1.y * 34 }); line(sh, { x: sh.x + a2.x * 34, y: sh.y + a2.y * 34 });
   } else {
-    line(sh, { x: H.x + n.x * 6, y: H.y + n.y * 6 }); line(sh, { x: H.x - n.x * 6, y: H.y - n.y * 6 });
+    // 頭の下(首)から肩へ出て、そこからまっすぐ上にのばしてバーをにぎる(頭のうしろにかくれないように)
+    elbows.forEach((e, k) => line(sh, e, hands[k]));
   }
   // からだ・頭(服:ランキング5位以内の人が色をえらべる。黒いふちどりで、どの背景でも見える。服は背骨の上にかさねる)
   line(sh, hip);
   if (shirt) {
     const waist = at(H, 62), el = (v, k) => ({ x: sh.x + v.x * k, y: sh.y + v.y * k });
-    const arms = P.mode === 'fall' || P.mode === 'lie' ? [rot(d, -2.2), rot(d, 2.2)] : [{ x: (H.x + n.x * 6 - sh.x) / 30, y: (H.y + n.y * 6 - sh.y) / 30 }, { x: (H.x - n.x * 6 - sh.x) / 30, y: (H.y - n.y * 6 - sh.y) / 30 }];
+    const unit = e => { const x = e.x - sh.x, y = e.y - sh.y, l = Math.hypot(x, y) || 1; return { x: x / l, y: y / l }; };
+    const arms = P.mode === 'fall' || P.mode === 'lie' ? [rot(d, -2.2), rot(d, 2.2)] : elbows.map(unit);
     g.strokeStyle = '#111'; g.lineWidth = 19; line(sh, waist); g.lineWidth = 12; arms.forEach(v => line(sh, el(v, 12)));
     g.strokeStyle = shirt; g.lineWidth = 15; line(sh, waist); g.lineWidth = 8; arms.forEach(v => line(sh, el(v, 11)));
     g.strokeStyle = C.ink;
