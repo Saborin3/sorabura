@@ -53,8 +53,8 @@ label.field{display:flex;flex-direction:column;gap:6px;font-size:16px}
 .ct-kinds{border:2px solid var(--line);border-radius:12px;padding:6px 10px 10px;margin:0}
 .ct-kinds legend{font-size:14px;color:var(--sub);padding:0 4px}
 .ct-kind-list{display:flex;flex-direction:column;gap:8px}
-.ct-kind-list label{display:block;cursor:pointer}
-.ct-kind-list input{position:absolute;opacity:0;width:1px;height:1px}
+.ct-kind-list label{display:block;cursor:pointer;position:relative}
+.ct-kind-list input{position:absolute;left:14px;top:50%;opacity:0;width:1px;height:1px;margin:0}
 .ct-kind-list label>span{display:flex;align-items:center;gap:12px;min-height:50px;padding:8px 14px;border-radius:10px;border:2px solid var(--line);background:var(--panel);font-size:16px;font-weight:bold;text-align:left}
 .ct-kind-list label>span::before{content:"";flex:none;width:20px;height:20px;border-radius:50%;border:2px solid currentColor;box-sizing:border-box}
 .ct-kind-list input:checked + span{border:3px solid var(--accent);background:var(--panel2)}
@@ -834,7 +834,9 @@ function refreshAccount() {
   $('accountText').innerHTML = account ? 'ログイン中:<b></b>' : 'ゲストで遊んでいます';
   if (account) $('accountText').querySelector('b').textContent = account.name;
   $('toLogin').textContent = account ? '切りかえ' : 'ログイン';
-  $('meRow').classList.toggle('hidden', !CONFIG.SERVER_URL || !!EVENT);   // ゲストのときも出して、こういう機能があると気づいてもらう
+  $('meRow').classList.toggle('hidden', !CONFIG.SERVER_URL || !!EVENT);
+  // サーバーがない版では、お問い合わせは送れないので出さない
+  ['toContact', 'pzContact', 'resContact'].forEach(id => { if (!CONFIG.SERVER_URL) $(id).classList.add('hidden'); });   // ゲストのときも出して、こういう機能があると気づいてもらう
 }
 
 /* =========================================================
@@ -1926,6 +1928,7 @@ async function sendContact() {
   ctBusy = true; $('ctSend').disabled = true; msg.textContent = '送っています…'; msg.className = '';
   try {
     const res = await apiPost(body);
+    if (res && res.error === 'bad_action') { bad('サーバーがまだ古い版なので、送れませんでした(書いた内容は残してあります)'); return; }
     if (!res || !res.ok) { bad(res && res.error === 'busy' ? '今は混んでいるか、送る回数が多すぎます。少し時間をおいて、もう一度送ってください(書いた内容は残してあります)' : '送れませんでした。書いた内容は残してあるので、もう一度送ってください'); return; }
     $('ctText').value = ''; ctCount(); store.set('contactDraft', null);
     msg.textContent = '送りました。ありがとう!ちゃんと読みます'; msg.className = 'good';
@@ -1957,7 +1960,7 @@ const SHORTCUTS = [
   { code: 'KeyC', key: 'C', btn: 'toOutfit', go: () => { if (CONFIG.SERVER_URL) openOutfit(current); }, anywhere: true, noEvent: true },   // 着せかえ(Clothes)
   { code: 'KeyT', key: 'T', btn: 'toTitles', go: () => { if (CONFIG.SERVER_URL) openTitles(current); }, anywhere: true, noEvent: true },   // 称号(ログインしているとき)
   { code: 'KeyI', key: 'I', btn: 'toNews', go: () => openNews(current), anywhere: true, noEvent: true },                    // お知らせ(アイクエと同じ I)
-  { code: 'KeyQ', key: 'Q', btn: ['toContact', 'resContact'], go: () => openContact(current), anywhere: true, noEvent: true },   // お問い合わせ(アイクエと同じ Q。体験イベントでは Q は「おわる」)
+  { code: 'KeyQ', key: 'Q', btn: ['toContact', 'resContact'], go: () => { if (CONFIG.SERVER_URL) openContact(current); }, anywhere: true, noEvent: true },   // お問い合わせ(アイクエと同じ Q。体験イベントでは Q は「おわる」)
 ];
 const NAV_SCREENS = ['title', 'menu', 'howto', 'settings', 'ranking', 'result', 'login', 'news', 'contact', 'titlesel', 'outfit'];
 // ボタンに、キーの印と aria-keyshortcuts(画面読み上げソフトに伝える)をつける
@@ -1989,7 +1992,7 @@ document.addEventListener('keydown', e => {
   // 一時停止中:H でタイトルへ
   if (current === 'game') {
     if (settings.keys && G && G.paused && e.code === 'KeyH') { e.preventDefault(); $('quitBtn').click(); }
-    if (settings.keys && G && G.paused && e.code === 'KeyQ' && !EVENT && $('overlay') && !$('overlay').classList.contains('hidden')) { e.preventDefault(); openContact('game'); }
+    if (settings.keys && G && G.paused && e.code === 'KeyQ' && !EVENT && CONFIG.SERVER_URL && $('overlay') && !$('overlay').classList.contains('hidden')) { e.preventDefault(); openContact('game'); }
     return;
   }
   if (!NAV_SCREENS.includes(current)) return;   // 体験イベントの「体験おわり」画面などでは使わない
@@ -2332,6 +2335,7 @@ async function openTitles(from) {
     const r = await apiPost({ action: 'titles', name: account.name, token: account.token });
     if (!r || !r.ok) {
       if (r && r.error === 'bad_token') { account = null; store.del('account'); refreshAccount(); $('tsStatus').textContent = 'ログインし直してください'; return; }
+      if (r && r.error === 'bad_action') { $('tsStatus').textContent = 'サーバーがまだ古い版です。サーバー(GAS)を新しくすると使えます'; return; }
       throw new Error(r ? r.error : '');
     }
     tsOwned = r.owned || []; tsChosen = r.chosen || '';
