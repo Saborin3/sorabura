@@ -1008,6 +1008,11 @@ function nextPeriod(catches, combo) {
   const amp = 0.15 * Math.min(1, Math.max(0, (catches - 15) / 15));
   return Math.max(min, base * (1 + (Math.random() * 2 - 1) * amp));
 }
+// クリティカル連続ボーナス(第2回 2026/11/16 から。?test なら今すぐ試せる)
+// クリティカルが続くと、クリティカルの点に ×1.5(2連続)・×2(3連続)・×2.5(4連続)・×3(5連続から) がかかる。ナイス・セーフ・ミスで0にもどる
+const CHAIN_FROM = Date.parse('2026-11-16T00:00:00+09:00');
+const CHAIN_STEP = 0.5, CHAIN_MAX = 3;
+const chainMul = n => Math.min(CHAIN_MAX, 1 + CHAIN_STEP * (n - 1));
 const TARGET_PHASE = 0.40;         // 1回のゆれのうち、はなす瞬間(前にふり上がる途中)
 const MAX_CYCLES = 4;              // 合図は4回まで。そのあと手がすべる
 const OMEGA2 = Math.pow(2 * Math.PI / 2.4, 2);
@@ -1096,7 +1101,8 @@ function newGame(practice) {
   G = {
     cover: Math.random() < 0.5 ? 'hand' : 'bluebird', coverSeed: Math.random() * 1000,   // ノールックのふた(手のひらか青い鳥)
     practice, mode: MODES.includes(settings.mode) ? settings.mode : 'nolook', bar: settings.bar, state: 'swing', i: 0, t0: now + 1600, period: 2.4,
-    lives: practice ? Infinity : 1, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0,   // 本番は1回ミスしたらおしまい
+    lives: practice ? Infinity : 1, score: 0, combo: 0, maxCombo: 0, crits: 0, catches: 0, chain: 0, maxChain: 0,
+    chainOn: TEST_MODE || Date.now() >= CHAIN_FROM,   // 本番は1回ミスしたらおしまい
     startAt: now, pausedTotal: 0, pausedAt: 0, paused: false,
     traps: new Map(), sched: new Map(), lit: new Set(), fly: null, net: null, pop: null, cam: 0, lastT: now,
     amp: W.A, pitch: 1, prev: null, wind: null, epoch: 0, windFx: null,
@@ -1258,17 +1264,23 @@ function release() {
 }
 function judge(kind, err) {
   const J = JUDGE[kind];
+  G.chain = kind === 'crit' ? G.chain + 1 : 0;   // クリティカルの連続(ナイス・セーフ・ミスで0)
+  G.maxChain = Math.max(G.maxChain, G.chain);
+  const chainBonus = G.chainOn && kind === 'crit' && G.chain >= 2;
+  const cm = chainBonus ? chainMul(G.chain) : 1;
   if (kind === 'miss') { G.combo = 0; SFX.miss(); vibrate([60, 40, 60]); }
   else {
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
     if (kind === 'crit') { G.crits++; SFX.crit(); vibrate([30, 30, 90]); } else if (kind === 'nice') SFX.nice(); else SFX.safe();
     const mult = 1 + Math.min(G.combo - 1, 20) * 0.1, speed = Math.min(2.4 / 1.35, 2.4 / G.period);
-    G.score += Math.round(J.base * mult * speed * (G.bar && !G.practice ? 0.8 : 1));   // バーありは ×0.8(モードの倍率はなし)
+    G.score += Math.round(J.base * mult * speed * cm * (G.bar && !G.practice ? 0.8 : 1));   // バーありは ×0.8(モードの倍率はなし)
   }
   const ms = Math.round(err);
   const sub = kind === 'crit' && Math.abs(ms) <= 30 ? 'ぴったり!' : (ms < 0 ? 'はやい ' + (-ms) + 'ms' : 'おそい ' + ms + 'ms');
-  G.pop = { text: J.text, sub: kind === 'crit' ? '大ジャンプ! ' + sub : sub, color: J.color, t: gnow() };
-  say(kind === 'miss' ? 'ミス、' + (ms < 0 ? 'はやい' : 'おそい') : (kind === 'crit' && G.combo > 1 ? J.voice + '、' + G.combo + 'コンボ' : J.voice));
+  G.pop = { text: J.text, sub: kind === 'crit' ? (chainBonus ? G.chain + '連続 ×' + cm + '! ' : '大ジャンプ! ') + sub : sub, color: J.color, t: gnow() };
+  // 読み上げ:クリティカルなら「クリティカル3連続、25コンボ」(コンボ数は、じゃま要素の目安なので今までどおり読む)
+  const critVoice = chainBonus ? J.voice + G.chain + '連続' : J.voice;
+  say(kind === 'miss' ? 'ミス、' + (ms < 0 ? 'はやい' : 'おそい') : (kind === 'crit' && G.combo > 1 ? critVoice + '、' + G.combo + 'コンボ' : critVoice));
   updateHud();
 }
 function startFall(from, th, why) {
@@ -1812,6 +1824,12 @@ document.addEventListener('keydown', e => {
    新しいお知らせは、いちばん上に足す。id は前のより大きい数字にすると、タイトルの「お知らせ」に「新着」が出る
    ========================================================= */
 const NEWS = [
+  { id: 8, date: '2026/11/11', title: '11/16(第2回)から「クリティカル連続ボーナス」がはじまります', items: [
+    'クリティカルを続けて出すと、クリティカルの点がふえます。2連続で×1.5、3連続で×2、4連続で×2.5、5連続からは×3。ナイス・セーフ・ミスで0にもどります',
+    'うまい人は短い時間で高い点を、じっくり続ける人は時間をかけて高い点をめざせます',
+    '連続しているときは「クリティカル3連続、25コンボ」のように読み上げ、画面にも「3連続 ×2!」と出ます。結果画面には最大の連続数が出ます',
+    '点数の計算が変わるので、第2回(11/16〜)からにしました。第1回(〜11/15)は今までの計算のままです',
+  ] },
   { id: 7, date: '2026/11/09', title: 'ホーム画面をすっきりさせました', items: [
     'ホームは「ログイン」「モード」「はじめる」「ランキング」「メニュー」だけになりました',
     'れんしゅう・あそびかた・せってい・お知らせ・お問い合わせ・称号・着せかえは「メニュー」の中にあります(キーボードなら N。ほかのキーはホームからそのまま使えます)',
@@ -2055,7 +2073,7 @@ function endGame() { cancelAnimationFrame(raf); if (G) { cancelBeats(); cancelBi
 let lastPractice = false;
 function gameOver() {
   G.over = true; cancelBeats(); cancelBird(); cancelWind(); swingStop(); SFX.over();
-  const res = { mode: G.mode, bar: G.bar && !G.practice, lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
+  const res = { mode: G.mode, bar: G.bar && !G.practice, lastMiss: G.lastMiss, score: G.score, dist: G.i * 5, crit: G.crits, chain: G.chainOn ? G.maxChain : 0, combo: G.maxCombo, sec: Math.round((gnow() - G.startAt) / 1000), practice: G.practice };
   setTimeout(() => { endGame(); showResult(res); }, 600);   // 一発勝負なので、すぐ結果へ(「もう一回」を押しやすく)
 }
 /* ---------- 煽り文句(もう一回やりたくなるように)---------- */
@@ -2121,7 +2139,7 @@ async function showResult(r) {
   if (EVENT) { evRecord(r); if (EV.over) { evShowEnd(); return; } }
   lastPractice = r.practice;
   guestScore = null; $('registerBtn').classList.add('hidden');
-  $('rScore').textContent = r.score.toLocaleString(); $('rDist').textContent = r.dist + 'm'; $('rCrit').textContent = r.crit; $('rCombo').textContent = r.combo;
+  $('rScore').textContent = r.score.toLocaleString(); $('rDist').textContent = r.dist + 'm'; $('rCrit').textContent = r.crit + (r.chain >= 2 ? '(最大' + r.chain + '連続)' : ''); $('rCombo').textContent = r.combo;
   const best = Math.max(store.get('best', 0), r.practice ? 0 : r.score); if (!r.practice) store.set('best', best);
   $('rBest').textContent = best.toLocaleString();
   const prevDist = store.get('bestDist', 0), isNewBest = !r.practice && r.dist > prevDist;
@@ -2129,7 +2147,7 @@ async function showResult(r) {
   const t = tauntFor(r.dist, prevDist, isNewBest, r.lastMiss);
   $('taunt').textContent = t.main; $('nextGoal').textContent = t.sub;
   $('barNote').textContent = [r.mode && r.mode !== 'normal' ? MODE_NAME[r.mode] + 'モード' : '', r.bar ? 'タイミングバーあり(点数 ×0.8)' : ''].filter(Boolean).join(' / ');
-  const head = t.main + '。' + (t.sub ? t.sub + '。' : '') + 'スコア ' + r.score + '点' + (r.mode && r.mode !== 'normal' ? '(' + MODE_NAME[r.mode] + ')' : '') + (r.bar ? '(タイミングバーあり)' : '') + '、きょり ' + r.dist + 'メートル、クリティカル ' + r.crit + '回、最大コンボ ' + r.combo + '。';
+  const head = t.main + '。' + (t.sub ? t.sub + '。' : '') + 'スコア ' + r.score + '点' + (r.mode && r.mode !== 'normal' ? '(' + MODE_NAME[r.mode] + ')' : '') + (r.bar ? '(タイミングバーあり)' : '') + '、きょり ' + r.dist + 'メートル、クリティカル ' + r.crit + '回' + (r.chain >= 2 ? '(最大' + r.chain + '連続)' : '') + '、最大コンボ ' + r.combo + '。';
   // live:あとから(通信のあとに)わかったことは、ライブリージョンでも読む
   const note = (text, live) => { $('resultMsg').textContent = text; $('resSr').textContent = '。' + head + text; if (live) announce(text); };
   $('resSr').textContent = '。' + head;
