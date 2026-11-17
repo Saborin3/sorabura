@@ -101,6 +101,8 @@ ol.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;ga
 ol.rank li{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;background:var(--panel);
   border:2px solid var(--line);border-radius:10px;padding:8px 10px}
 ol.rank li.me{border-color:var(--accent)}
+.chain-note{display:block;font-size:14px;font-weight:normal;color:var(--sub);margin-top:2px}
+html.hc-dark .chain-note{color:#fff}
 /* 称号を持っている人は、行の枠ごと金・銀・銅に(出している称号の色)。色だけでなく、名前のとなりの称号の文字でもわかる */
 ol.rank li.tier-gold{border:3px solid #e0b33a;background:linear-gradient(100deg, rgba(224,179,58,.34), rgba(224,179,58,.16) 75%), var(--panel);box-shadow:0 0 14px rgba(224,179,58,.35)}
 ol.rank li.tier-silver{border:3px solid #b9c3cd;background:linear-gradient(100deg, rgba(185,195,205,.34), rgba(185,195,205,.16) 75%), var(--panel);box-shadow:0 0 12px rgba(185,195,205,.25)}
@@ -2152,7 +2154,9 @@ async function showResult(r) {
   if (EVENT) { evRecord(r); if (EV.over) { evShowEnd(); return; } }
   lastPractice = r.practice;
   guestScore = null; $('registerBtn').classList.add('hidden');
-  $('rScore').textContent = r.score.toLocaleString(); $('rDist').textContent = r.dist + 'm'; $('rCrit').textContent = r.crit + (r.chain >= 2 ? '(最大' + r.chain + '連続)' : ''); $('rCombo').textContent = r.combo;
+  $('rScore').textContent = r.score.toLocaleString(); $('rDist').textContent = r.dist + 'm'; $('rCrit').textContent = r.crit;
+  if (r.chain >= 2) { const c = document.createElement('small'); c.className = 'chain-note'; c.textContent = '最大' + r.chain + '連続'; $('rCrit').appendChild(c); }   // 大きい数字のよこだと折り返すので、下に小さく
+  $('rCombo').textContent = r.combo;
   const best = Math.max(store.get('best', 0), r.practice ? 0 : r.score); if (!r.practice) store.set('best', best);
   $('rBest').textContent = best.toLocaleString();
   const prevDist = store.get('bestDist', 0), isNewBest = !r.practice && r.dist > prevDist;
@@ -2228,12 +2232,14 @@ function titleBadge(id) {
   const t = titleInfo(id); if (!t) return null;
   const b = document.createElement('span'); b.className = 'ttl ' + t.cls; b.textContent = t.text; return b;
 }
-function renderRank(list, meName, me) {
+function renderRank(list, meName, me, podium) {
+  // 枠ごと金・銀・銅に光るのは、ひとつ前の期の上位3人だけ(ほかの称号は、名前のとなりの称号だけ)
+  const tier = {}; (podium || []).forEach(p => { tier[String(p.name).toLowerCase()] = ['', 'gold', 'silver', 'bronze'][p.place]; });
   const ol = $('rankList'); ol.innerHTML = '';
   if (!list.length) { const li = document.createElement('li'); li.style.display = 'block'; li.textContent = 'まだ記録がありません'; ol.appendChild(li); return; }
   const add = (e, isMe) => {
     const li = document.createElement('li'); if (isMe) li.className = 'me';
-    const ti = titleInfo(e.title); if (ti) li.classList.add('tier-' + ti.cls);   // 称号の色で枠ごと光らせる
+    const tc = tier[String(e.name).toLowerCase()]; if (tc && e.title) li.classList.add('tier-' + tc);   // 称号を「出さない」にしている人は光らせない
     const no = document.createElement('span'); no.className = 'no'; no.innerHTML = '<span></span><span class="sr-only">位、</span>'; no.firstChild.textContent = e.rank;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.appendChild(document.createElement('span')).textContent = e.name;
     const tb = titleBadge(e.title); if (tb) nm.appendChild(tb);
@@ -2265,7 +2271,7 @@ async function loadRanking(mode) {
     $('seasonText').textContent = mode !== 'season' ? 'これまでの全記録'
       : r.season.no < 1 ? 'プレ期間(11月1日から第1回がはじまります)'
       : '第' + r.season.no + '回(' + r.season.start + '〜' + r.season.end + ')半月ごとに新しくなります';
-    renderRank(r.scores, account ? account.name : null, r.me);
+    renderRank(r.scores, account ? account.name : null, r.me, r.podium);
     if (account && r.me && r.me.rank <= OUTFIT_TOP) setOutfitState({ ok: true });   // 5位以内なら着せかえを使える(下がったかどうかは、送ったとき・着せかえを開いたときにたしかめる)
     // 前回(終わった期)の表彰台:金・銀・銅
     if (r.podium && r.podium.length) {
