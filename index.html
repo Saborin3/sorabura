@@ -101,9 +101,17 @@ ol.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;ga
 ol.rank li{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;background:var(--panel);
   border:2px solid var(--line);border-radius:10px;padding:8px 10px}
 ol.rank li.me{border-color:var(--accent)}
+/* 称号を持っている人は、行の枠ごと金・銀・銅に(出している称号の色)。色だけでなく、名前のとなりの称号の文字でもわかる */
+ol.rank li.tier-gold{border:3px solid #e0b33a;background:linear-gradient(100deg, rgba(224,179,58,.34), rgba(224,179,58,.16) 75%), var(--panel);box-shadow:0 0 14px rgba(224,179,58,.35)}
+ol.rank li.tier-silver{border:3px solid #b9c3cd;background:linear-gradient(100deg, rgba(185,195,205,.34), rgba(185,195,205,.16) 75%), var(--panel);box-shadow:0 0 12px rgba(185,195,205,.25)}
+ol.rank li.tier-bronze{border:3px solid #c97a3d;background:linear-gradient(100deg, rgba(201,122,61,.34), rgba(201,122,61,.16) 75%), var(--panel);box-shadow:0 0 12px rgba(201,122,61,.3)}
+ol.rank li.tier-gold .no{color:#f2cc5c}ol.rank li.tier-silver .no{color:#d5dce3}ol.rank li.tier-bronze .no{color:#e39a62}
+/* 自分の行が称号の色になっても、自分だとわかるように外側にもう1本線 */
+ol.rank li.me[class*=tier-]{outline:3px solid var(--accent);outline-offset:2px}
 ol.rank .no{font-size:20px;font-weight:bold;text-align:center}
-ol.rank .nm{font-size:17px;display:flex;align-items:center;min-width:0}
-ol.rank .nm>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+ol.rank .nm{font-size:17px;display:flex;align-items:center;min-width:0;flex-wrap:wrap;row-gap:4px}
+/* せまい画面では名前を切らずに、称号やモードのマークを下の行に回す */
+ol.rank .nm>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 ol.rank .nm .ttl,ol.rank .nm .barmark{flex-shrink:0}
 /* ノールックだけ色つき(水色の地に濃い文字)。ほかのマークは灰色の枠 */
 .barmark.nolookmark{background:#56B4E9;color:#06263a;border-color:#56B4E9;font-weight:bold}
@@ -183,6 +191,7 @@ html.hc-dark .modes span small, html.hc-dark .modes legend{color:#fff}
   .lamp.on{forced-color-adjust:none;background:Highlight;color:HighlightText;border-color:Highlight}
   .ttl{border:1px solid CanvasText}
   ol.rank li.me{border-width:4px}
+  ol.rank li[class*=tier-]{border-style:double;border-width:6px}
 }
 /* ハイコントラストで「暗い画面」のとき:黒地に白・黄色・水色だけ */
 html.hc-dark, html.hc-dark *{forced-color-adjust:none}
@@ -193,6 +202,9 @@ html.hc-dark .panel, html.hc-dark .account, html.hc-dark .stats div, html.hc-dar
 html.hc-dark .tab[aria-selected=true]{color:#ff0;border:5px solid #ff0;text-decoration:underline;text-underline-offset:4px}
 html.hc-dark .tab[aria-selected=true]::before{content:"● "}
 html.hc-dark ol.rank li.me{border:4px solid #ff0}
+html.hc-dark ol.rank li[class*=tier-]{border:6px double #fff;box-shadow:none}
+html.hc-dark ol.rank li[class*=tier-] .no{color:#fff}
+html.hc-dark ol.rank li.me[class*=tier-]{border-color:#ff0;outline:none}
 html.hc-dark .note, html.hc-dark .season, html.hc-dark .champs, html.hc-dark .stats div, html.hc-dark h1 small{color:#fff}
 html.hc-dark .big-score, html.hc-dark .next-goal{color:#ff0}
 html.hc-dark .ttl, html.hc-dark .ttl.gold, html.hc-dark .ttl.silver, html.hc-dark .ttl.bronze{background:#000;color:#ff0;border:1px solid #ff0}
@@ -2221,6 +2233,7 @@ function renderRank(list, meName, me) {
   if (!list.length) { const li = document.createElement('li'); li.style.display = 'block'; li.textContent = 'まだ記録がありません'; ol.appendChild(li); return; }
   const add = (e, isMe) => {
     const li = document.createElement('li'); if (isMe) li.className = 'me';
+    const ti = titleInfo(e.title); if (ti) li.classList.add('tier-' + ti.cls);   // 称号の色で枠ごと光らせる
     const no = document.createElement('span'); no.className = 'no'; no.innerHTML = '<span></span><span class="sr-only">位、</span>'; no.firstChild.textContent = e.rank;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.appendChild(document.createElement('span')).textContent = e.name;
     const tb = titleBadge(e.title); if (tb) nm.appendChild(tb);
