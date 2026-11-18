@@ -150,6 +150,12 @@ ol.rank .sc small{display:block;font-size:12px;color:var(--sub);font-weight:norm
   padding:max(8px,env(safe-area-inset-top)) 12px 8px;pointer-events:none;font-variant-numeric:tabular-nums}
 #hud .box{background:rgba(13,27,42,.78);border:2px solid var(--line);border-radius:10px;padding:4px 8px;font-size:12px;line-height:1.25;white-space:nowrap;min-width:58px}
 #hud .box b{display:block;font-size:20px}
+/* 「一発勝負」「れんしゅう」は文字が多いので小さめに(せまいスマホでとなりの箱にはみ出さないように) */
+#hud .box b#hLife{font-size:15px;line-height:25px;overflow:hidden;text-overflow:ellipsis}
+/* 箱はちぢまない(数字がはみ出さない)。場所が足りないときは「モード」の箱だけちぢむ */
+#hud .box{flex:0 0 auto}
+#hud #hLifeBox{flex:0 1 auto;min-width:0;overflow:hidden}
+@media (max-width:420px){ #hud{gap:5px;padding-left:8px;padding-right:8px} #hud .box{padding:4px 6px} #hud .box b{font-size:18px} }
 #hud .grow{flex:1}
 #pauseBtn{pointer-events:auto;width:52px;height:52px;border-radius:12px;font-size:20px;border:2px solid var(--line);background:var(--panel2);color:var(--ink)}
 #releaseBtn{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));
@@ -474,7 +480,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
   <div id="hud">
     <div class="box" aria-hidden="true">スコア<b id="hScore">0</b></div>
     <div class="box" aria-hidden="true">きょり<b id="hDist">0m</b></div>
-    <div class="box" aria-hidden="true">モード<b id="hLife">一発勝負</b></div>
+    <div class="box" id="hLifeBox" aria-hidden="true">モード<b id="hLife">一発勝負</b></div>
     <div class="box" aria-hidden="true">コンボ<b id="hCombo">0</b></div>
     <div class="grow"></div>
     <button id="pauseBtn" aria-label="一時停止">II</button>
@@ -1054,8 +1060,10 @@ function cachedLayer(name, paint) {
   }
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(L.c, 0, 0); ctx.restore();
 }
+// 画面のきめ細かさ(1ピクセルに何点描くか)の上限。重い端末では自動で下げる(下の perfWatch)
+let dprCap = 2;
 function resize() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(dprCap, window.devicePixelRatio || 1);
   const r = $('stage').getBoundingClientRect();
   cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
   // 高さ540と、横にブランコ2つ半(つぎ・クリティカルの先)が入るように縮める。縦長の画面では上下の真ん中に置く
@@ -1064,7 +1072,7 @@ function resize() {
   const sc = Math.min(r.height / W.H, r.width / (portrait ? 520 : 700));
   view = { w: r.width, h: r.height, dpr, s: sc, oy: Math.max(0, (r.height - W.H * sc) / 2), portrait };
 }
-window.addEventListener('resize', () => { if (current === 'game') resize(); });
+window.addEventListener('resize', () => { if (current === 'game') { resize(); if (G) fitHud(); } });
 
 const gnow = () => performance.now() - (G ? G.pausedTotal : 0);   // ゲームの時計(一時停止した分はとまる)
 const realOf = gms => gms + G.pausedTotal;
@@ -1378,6 +1386,13 @@ function updateHud() {
   $('hDist').textContent = G.i * 5 + 'm';
   $('hLife').textContent = G.practice ? 'れんしゅう' : '一発勝負';
   $('hCombo').textContent = G.combo;
+  fitHud();
+}
+// せまいスマホで点数が大きくなると、上の表示が入りきらない。そのときは「モード」の箱だけかくす(ほかの数字は切らない)
+function fitHud() {
+  const box = $('hLifeBox'); box.style.display = '';
+  const b = $('hLife');
+  if (current === 'game' && b.scrollWidth > b.clientWidth + 1) box.style.display = 'none';   // 「一発…」のように切れるなら、出さない
 }
 
 /* =========================================================
@@ -1803,8 +1818,33 @@ function drawStick(P, g = ctx, shirt = outfitColor()) {
 }
 
 /* ---------- ループ ---------- */
+/* ---------- 重いときは自動で画質を下げる ----------
+   ほかのアプリやタブが動いている・電池が熱い・省電力モードなどで描くのが間に合わないと、カクつく。
+   2秒ごとに「間に合わなかったコマ」の割合を見て、多ければ描く点の数を減らす(2 → 1.5 → 1)。
+   合図の音は音の時計で鳴らしているので、画質を下げても音のタイミングは変わらない */
+const perf = { last: 0, n: 0, slow: 0, base: 0, bad: 0, log: [] };
+function perfWatch() {
+  const t = performance.now(), d = t - perf.last; perf.last = t;
+  if (d <= 0 || d > 250) return;   // 裏にいた・一時停止していたあとの長いすき間は数えない
+  // その端末のふつうのコマの長さ(60Hzなら16.7ms、120Hzなら8.3ms)を、いちばん速いコマから覚える
+  perf.base = perf.base ? Math.min(perf.base * 1.002, Math.max(d, 6)) : d;
+  perf.n++; if (d > perf.base * 1.7 + 4) perf.slow++;
+  if (perf.n < 120) return;
+  const ratio = perf.slow / perf.n; perf.n = 0; perf.slow = 0;
+  perf.log.push(Math.round(ratio * 100)); if (perf.log.length > 20) perf.log.shift();
+  // 始まってすぐの3秒は、準備でカクつくことがあるので見ない。2回続けて重かったときだけ下げる
+  if (!G || performance.now() - G.startAt < 3000) return;
+  perf.bad = ratio > 0.2 ? perf.bad + 1 : 0;
+  const dev = window.devicePixelRatio || 1;
+  if (perf.bad >= 2 && Math.min(dprCap, dev) > 1) {
+    perf.bad = 0;
+    dprCap = Math.max(1, Math.min(dprCap, dev) - 0.5);
+    resize();
+  }
+}
 function loop() {
   if (!G) return;
+  perfWatch();
   const now = gnow(), dt = Math.min(0.05, (now - G.lastT) / 1000); G.lastT = now;
   if (!G.paused && !G.over) update(now, dt);
   if (performance.now() - G.startAt > 1200) checkAudio();   // 始まって少したっても効果音が止まっていたら知らせる
