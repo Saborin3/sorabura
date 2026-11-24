@@ -611,16 +611,25 @@ function keepPlaybackSession() {
       // iPhoneは読み上げ(声)を始めると、ほかの再生を勝手に止める。止められたら、すぐ流し直す
       silentEl.addEventListener('pause', () => { if (!document.hidden) setTimeout(reviveAudio, 60); });
     }
-    if (silentEl.paused) { const p = silentEl.play(); if (p && p.catch) p.catch(() => {}); }
+    // iPhoneでは、タップの外で play() すると、断られるうえに、そのたびに数百ミリ秒かたまることがある。
+    // 一度断られたら、つぎに画面をさわるまでは流し直さない(さわったときの audioInit で silentBlocked を戻す)
+    // さわったときでも、3秒に1回まで(連続でタップしても、そのたびにかたまらないように)
+    // ゲーム中(効果音がちゃんと鳴っているあいだ)は流し直さない。読み上げのたびに止められて流し直すと、そのたびにかたまるので
+    const playing = G && !G.paused && !G.over && current === 'game' && ac && ac.state === 'running';
+    if (silentEl.paused && !silentBlocked && !playing && performance.now() - silentTryAt > 3000) {
+      silentTryAt = performance.now();
+      const p = silentEl.play();
+      if (p && p.catch) p.catch(() => { silentBlocked = true; });
+    }
   } catch (e) {}
 }
+let silentBlocked = false, silentTryAt = -1e9;
 // 止められた音をたて直す(タップがなくても、できる範囲で)。何回も呼ばれても重くならないように間をあける
 let reviveAt = 0;
 function reviveAudio() {
   if (!ac || document.hidden) return;
-  const now = performance.now(); if (now - reviveAt < 250) return; reviveAt = now;
-  // iPhoneは読み上げのあと、音の種類が「マナーモードで消える音」にもどされることがあるので、毎回「音楽の再生」に戻す
-  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+  // iPhoneでは、音の立て直しのたびに画面が数百ミリ秒かたまることがあるので、2秒に1回まで
+  const now = performance.now(); if (now - reviveAt < 2000) return; reviveAt = now;
   keepPlaybackSession();
   if (ac.state !== 'running') { try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
@@ -638,6 +647,7 @@ function audioInit() {
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
+  silentBlocked = false;   // 画面をさわったので、無音の再生をもう一度ためしてよい
   keepPlaybackSession();
   if (ac.state !== 'running') { try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
   if (!audioUnlocked) {   // 無音を1回鳴らす
@@ -670,7 +680,7 @@ function warmDraw() {
 // 効果音が止まったままゲームが始まったら、声(読み上げは動いているので)と画面で知らせる
 let audioWarned = -Infinity;
 function checkAudio() {
-  if (ac && !document.hidden && ((silentEl && silentEl.paused) || ac.state !== 'running')) reviveAudio();
+  if (ac && !document.hidden && ac.state !== 'running') reviveAudio();
   if (!ac || !G || G.paused || G.mode === 'silent' || ac.state === 'running') return;
   const now = performance.now(); if (now - audioWarned < 6000) return;
   audioWarned = now;
@@ -1860,21 +1870,22 @@ function loop() {
   const t0 = performance.now();
   const now = gnow(), dt = Math.min(0.05, (now - G.lastT) / 1000); G.lastT = now;
   if (!G.paused && !G.over) update(now, dt);
+  const ta = performance.now();
   if (performance.now() - G.startAt > 1200) checkAudio();   // 始まって少したっても効果音が止まっていたら知らせる
   const t1 = performance.now();
   draw(now);
-  if (PERF_MODE) perfOverlay(t0, t1, performance.now());
+  if (PERF_MODE) { pm.aud = Math.max(pm.aud || 0, t1 - ta); perfOverlay(t0, ta, performance.now(), t1); }
   raf = requestAnimationFrame(loop);
 }
-function perfOverlay(t0, t1, t2) {
-  pm.frames++; pm.upd = Math.max(pm.upd, t1 - t0); pm.drw = Math.max(pm.drw, t2 - t1);
+function perfOverlay(t0, t1, t2, t1b) {
+  pm.frames++; pm.upd = Math.max(pm.upd, t1 - t0); pm.drw = Math.max(pm.drw, t2 - t1b);
   const gap = pm.last ? t0 - pm.last : 0; pm.last = t0; if (gap < 250) pm.worst = Math.max(pm.worst, gap);
   if (t0 - pm.t0 >= 1000) {
-    pm.text = `${pm.frames}fps 最長${Math.round(pm.worst)}ms 計算${pm.upd.toFixed(1)} 描く${pm.drw.toFixed(1)}ms 画質${view.dpr} ${cv.width}x${cv.height} ${settings.quality || 'auto'}`;
-    pm.t0 = t0; pm.frames = 0; pm.worst = 0; pm.upd = 0; pm.drw = 0;
+    pm.text = `${pm.frames}fps 計算${pm.upd.toFixed(1)} 音${(pm.aud || 0).toFixed(1)} 描く${pm.drw.toFixed(1)}ms 画質${view.dpr} ${ac ? ac.state : '-'}`;
+    pm.t0 = t0; pm.frames = 0; pm.worst = 0; pm.upd = 0; pm.drw = 0; pm.aud = 0;
   }
   ctx.save(); ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(4, view.h - 24, Math.min(view.w - 8, ctx.measureText(pm.text).width + 12), 20);
+  ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(4, view.h - 24, Math.min(view.w - 8, ctx.measureText(pm.text).width + 12), 20);   // 「はなす」ボタンにかからないよう左下
   ctx.fillStyle = '#fff'; ctx.fillText(pm.text, 10, view.h - 9); ctx.restore();
 }
 
