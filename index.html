@@ -387,6 +387,7 @@ html.hc-dark #evBadge::before{background:#ff0;opacity:1;top:auto;height:6px}
       <label class="set">動きを減らす(回転・ゆれなし)<input type="checkbox" id="sCalm"></label>
       <label class="set"><span>ハイコントラストのときは暗い画面にする<br><small class="note">まぶしさが苦手な人向け。オフにすると Windows の色(白い背景など)に合わせます</small></span><input type="checkbox" id="sHcDark"></label>
       <label class="set"><span>ショートカットキー(R でもう一回 など)<br><small class="note">画面読み上げソフトのキーとぶつかるときはオフに</small></span><input type="checkbox" id="sKeys"></label>
+      <label class="set"><span>画質<br><small class="note">カクつくときは「かるい」に</small></span><select id="sQuality"><option value="auto">自動</option><option value="high">きれい</option><option value="low">かるい</option></select></label>
       <label class="set">タイミング補正<input type="range" id="sOff" min="-200" max="200" step="10"><span class="val" id="vOff"></span></label>
     </div>
     <p class="note">Bluetoothイヤホンなどで音が遅れて聞こえるときは、補正を「＋」にしてください。いつも「おそい」と出るなら＋、「はやい」と出るならー。</p>
@@ -556,7 +557,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('sorabura_' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('sorabura_' + k); } catch (e) {} },
 };
-const SETTING_DEFAULTS = { vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true, keys: true };
+const SETTING_DEFAULTS = { vol: 0.8, voice: true, vib: true, guide: true, calm: false, offset: 0, bar: false, hcDark: true, keys: true, quality: 'auto' };
 const settings = Object.assign({}, SETTING_DEFAULTS, store.get('settings', {}));
 let account = store.get('account', null);   // {name, token}
 
@@ -984,6 +985,8 @@ function bindSettings() {
   $('sHcDark').checked = settings.hcDark;
   $('sHcDark').addEventListener('change', e => { settings.hcDark = e.target.checked; save(); updatePalette(); });
   $('sOff').addEventListener('input', e => { settings.offset = +e.target.value; save(); });
+  $('sQuality').value = settings.quality || 'auto';
+  $('sQuality').addEventListener('change', e => { settings.quality = e.target.value; save(); applyQuality(); });
   $('sKeys').checked = settings.keys;
   $('sKeys').addEventListener('change', e => { settings.keys = e.target.checked; save(); markKeys(); });
 }
@@ -1060,8 +1063,14 @@ function cachedLayer(name, paint) {
   }
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(L.c, 0, 0); ctx.restore();
 }
-// 画面のきめ細かさ(1ピクセルに何点描くか)の上限。重い端末では自動で下げる(下の perfWatch)
-let dprCap = 2;
+// 画面のきめ細かさ(1ピクセルに何点描くか)の上限。「自動」なら重い端末で下げる(下の perfWatch)。「かるい」は最初から1
+let dprCap = settings.quality === 'low' ? 1 : 2;
+function applyQuality() {
+  const q = settings.quality || 'auto';
+  dprCap = q === 'low' ? 1 : 2;
+  perf.bad = 0;
+  if (current === 'game') resize();
+}
 function resize() {
   const dpr = Math.min(dprCap, window.devicePixelRatio || 1);
   const r = $('stage').getBoundingClientRect();
@@ -1836,20 +1845,37 @@ function perfWatch() {
   if (!G || performance.now() - G.startAt < 3000) return;
   perf.bad = ratio > 0.2 ? perf.bad + 1 : 0;
   const dev = window.devicePixelRatio || 1;
-  if (perf.bad >= 2 && Math.min(dprCap, dev) > 1) {
+  if ((settings.quality || 'auto') === 'auto' && perf.bad >= 2 && Math.min(dprCap, dev) > 1) {
     perf.bad = 0;
     dprCap = Math.max(1, Math.min(dprCap, dev) - 0.5);
     resize();
   }
 }
+// ?perf をつけると、左下に「1秒あたりのコマ数・いちばん長かったコマ・計算と描くのにかかった時間・画質」を出す(カクつきの原因さがし用)
+const PERF_MODE = /[?&]perf\b/.test(location.search);
+const pm = { t0: 0, frames: 0, worst: 0, upd: 0, drw: 0, text: '' };
 function loop() {
   if (!G) return;
   perfWatch();
+  const t0 = performance.now();
   const now = gnow(), dt = Math.min(0.05, (now - G.lastT) / 1000); G.lastT = now;
   if (!G.paused && !G.over) update(now, dt);
   if (performance.now() - G.startAt > 1200) checkAudio();   // 始まって少したっても効果音が止まっていたら知らせる
+  const t1 = performance.now();
   draw(now);
+  if (PERF_MODE) perfOverlay(t0, t1, performance.now());
   raf = requestAnimationFrame(loop);
+}
+function perfOverlay(t0, t1, t2) {
+  pm.frames++; pm.upd = Math.max(pm.upd, t1 - t0); pm.drw = Math.max(pm.drw, t2 - t1);
+  const gap = pm.last ? t0 - pm.last : 0; pm.last = t0; if (gap < 250) pm.worst = Math.max(pm.worst, gap);
+  if (t0 - pm.t0 >= 1000) {
+    pm.text = `${pm.frames}fps 最長${Math.round(pm.worst)}ms 計算${pm.upd.toFixed(1)} 描く${pm.drw.toFixed(1)}ms 画質${view.dpr} ${cv.width}x${cv.height} ${settings.quality || 'auto'}`;
+    pm.t0 = t0; pm.frames = 0; pm.worst = 0; pm.upd = 0; pm.drw = 0;
+  }
+  ctx.save(); ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(4, view.h - 24, Math.min(view.w - 8, ctx.measureText(pm.text).width + 12), 20);
+  ctx.fillStyle = '#fff'; ctx.fillText(pm.text, 10, view.h - 9); ctx.restore();
 }
 
 /* ---------- 入力 ---------- */
