@@ -567,22 +567,40 @@ function announce(text) { const el = $('sr'); el.textContent = ''; setTimeout(()
 // iPhone の Safari は「止めた直後に話す」と、新しい声が消えることがあるので、
 //   ・話している途中のときだけ止めて、少し待ってから話す
 //   ・important(結果の煽り文句など)は、話し始めなかったらもう一度だけ話す
+// ゲーム中の声。iPhoneは読み上げを「止める(cancel)」たびに画面がかたまったり、声が途中で切れたりするので、
+// しゃべっている最中に新しい声が来たら、今の声は最後まで読んで、そのあとに「いちばん新しい1つ」だけを読む(古いものは捨てる)。
+// 大事な知らせ(important)だけは、今の声を止めてすぐ読む
+let sayPending = null, sayBusy = false;
 function say(text, important) {
   if (!settings.voice || !('speechSynthesis' in window)) return;
   if (G && G.mode === 'silent') return;   // サイレントはゲーム中の声も出さない
   const ss = window.speechSynthesis;
-  const make = () => { const u = new SpeechSynthesisUtterance(text); u.lang = 'ja-JP'; u.rate = 1.4; u.volume = Math.min(1, settings.vol + 0.1); return u; };
-  const go = () => {
-    try {
-      if (ss.paused) ss.resume();
-      const u = make(); let started = false; u.onstart = () => { started = true; };
-      u.onend = u.onerror = () => setTimeout(reviveAudio, 30);   // iPhoneは読み上げで無音の再生が止められるので、終わったらすぐ戻す
-      ss.speak(u);
-      if (important) setTimeout(() => { if (!started && !ss.speaking) { try { ss.cancel(); ss.speak(make()); } catch (e) {} } }, 1500);
-    } catch (e) {}
-  };
-  try { if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(go, 120); } else go(); } catch (e) {}
+  if (!important && (sayBusy || ss.speaking || ss.pending)) { sayPending = text; return; }
+  if (important && (sayBusy || ss.speaking || ss.pending)) { sayPending = null; timedSpeech(() => ss.cancel()); sayBusy = false; }
+  speakNow(text, important);
 }
+function speakNow(text, important) {
+  const ss = window.speechSynthesis;
+  const make = () => { const u = new SpeechSynthesisUtterance(text); u.lang = 'ja-JP'; u.rate = 1.4; u.volume = Math.min(1, settings.vol + 0.1); return u; };
+  try {
+    if (ss.paused) ss.resume();
+    const u = make(); let started = false; u.onstart = () => { started = true; };
+    sayBusy = true;
+    const done = () => {
+      if (u._done) return; u._done = true; sayBusy = false;
+      setTimeout(() => reviveAudio(true), 30);   // iPhoneは声のあいだ効果音を止めるので、終わったらすぐもどす
+      if (sayPending) { const t = sayPending; sayPending = null; setTimeout(() => say(t), 40); }
+    };
+    u.onend = u.onerror = done;
+    // onend が来ないことがあるので、長さに合わせて自分でもたしかめる(まだしゃべっていたら、もう少し待つ)
+    const watch = () => { if (u._done) return; if (window.speechSynthesis.speaking) setTimeout(watch, 300); else done(); };
+    setTimeout(watch, 400 + text.length * 200);
+    timedSpeech(() => ss.speak(u));
+    if (important) setTimeout(() => { if (!started && !ss.speaking) { try { timedSpeech(() => { ss.cancel(); ss.speak(make()); }); } catch (e) {} } }, 1500);
+  } catch (e) { sayBusy = false; }
+}
+// 読み上げの呼び出しにかかった時間(?perf の表示用)
+function timedSpeech(fn) { const t = performance.now(); try { fn(); } catch (e) {} const d = performance.now() - t; if (typeof pm !== 'undefined') pm.spk = Math.max(pm.spk || 0, d); }
 function vibrate(ms) { if (settings.vib && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 
 /* =========================================================
@@ -609,14 +627,12 @@ function keepPlaybackSession() {
       silentEl = document.createElement('audio');
       silentEl.setAttribute('x-webkit-airplay', 'deny'); silentEl.preload = 'auto'; silentEl.loop = true; silentEl.src = silentWavUrl();
       // iPhoneは読み上げ(声)を始めると、ほかの再生を勝手に止める。止められたら、すぐ流し直す
-      silentEl.addEventListener('pause', () => { if (!document.hidden) setTimeout(reviveAudio, 60); });
+      silentEl.addEventListener('pause', () => { if (!document.hidden && !sayBusy && !(window.speechSynthesis && speechSynthesis.speaking)) setTimeout(reviveAudio, 60); });   // 声のあいだは、声が終わってからもどす
     }
     // iPhoneでは、タップの外で play() すると、断られるうえに、そのたびに数百ミリ秒かたまることがある。
     // 一度断られたら、つぎに画面をさわるまでは流し直さない(さわったときの audioInit で silentBlocked を戻す)
-    // さわったときでも、3秒に1回まで(連続でタップしても、そのたびにかたまらないように)
-    // ゲーム中(効果音がちゃんと鳴っているあいだ)は流し直さない。読み上げのたびに止められて流し直すと、そのたびにかたまるので
-    const playing = G && !G.paused && !G.over && current === 'game' && ac && ac.state === 'running';
-    if (silentEl.paused && !silentBlocked && !playing && performance.now() - silentTryAt > 3000) {
+    // 0.8秒に1回まで(連続で呼ばれても、そのたびに重くならないように)
+    if (silentEl.paused && !silentBlocked && performance.now() - silentTryAt > 800) {
       silentTryAt = performance.now();
       const p = silentEl.play();
       if (p && p.catch) p.catch(() => { silentBlocked = true; });
@@ -626,10 +642,10 @@ function keepPlaybackSession() {
 let silentBlocked = false, silentTryAt = -1e9;
 // 止められた音をたて直す(タップがなくても、できる範囲で)。何回も呼ばれても重くならないように間をあける
 let reviveAt = 0;
-function reviveAudio() {
+function reviveAudio(force) {
   if (!ac || document.hidden) return;
-  // iPhoneでは、音の立て直しのたびに画面が数百ミリ秒かたまることがあるので、2秒に1回まで
-  const now = performance.now(); if (now - reviveAt < 2000) return; reviveAt = now;
+  // 何回も呼ばれても重くならないように間をあける(声が終わったときは force で、すぐ立て直す)
+  const now = performance.now(); if (!force && now - reviveAt < 1000) return; reviveAt = now;
   keepPlaybackSession();
   if (ac.state !== 'running') { try { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
@@ -680,14 +696,28 @@ function warmDraw() {
 // 効果音が止まったままゲームが始まったら、声(読み上げは動いているので)と画面で知らせる
 let audioWarned = -Infinity;
 function checkAudio() {
-  if (ac && !document.hidden && ac.state !== 'running') reviveAudio();
-  if (!ac || !G || G.paused || G.mode === 'silent' || ac.state === 'running') return;
+  // 声をしゃべっているあいだは立て直さない(声が終わったときに立て直す。しゃべっている最中に立て直すと、かたまることがある)
+  const speaking = 'speechSynthesis' in window && (speechSynthesis.speaking || sayBusy);
+  if (ac && !document.hidden && ac.state !== 'running' && !speaking) reviveAudio();
+  if (!audioStopped()) return;
+  if (G.paused) return;
   const now = performance.now(); if (now - audioWarned < 6000) return;
   audioWarned = now;
   say('効果音が止まっています。画面をタップしてください', true);
 }
 // 効果音が止まっているあいだは、画面にずっと知らせを出しておく
-function audioStopped() { return !!(ac && G && G.mode !== 'silent' && ac.state !== 'running' && performance.now() - G.startAt > 1200); }
+// iPhoneは読み上げのあいだだけ、効果音を一時的に止める(中断にする)ことがある。声が終わればもどるので、
+// 2秒以上続けて止まっていて、しかも声をしゃべっていないときだけ「止まっています」と知らせる
+let audioBadSince = 0;
+function audioStopped() {
+  if (!(ac && G && G.mode !== 'silent' && performance.now() - G.startAt > 1200)) return false;
+  if (ac.state === 'running') { audioBadSince = 0; return false; }
+  const now = performance.now();
+  if (!audioBadSince) audioBadSince = now;
+  const speaking = 'speechSynthesis' in window && (speechSynthesis.speaking || sayBusy);
+  if (speaking) { audioBadSince = now; return false; }
+  return now - audioBadSince > 2000;
+}
 function drawAudioWarn() {
   if (!audioStopped()) return;
   bigText('🔇 音が止まっています', '#ffe14d', Math.max(view.h * 0.42, 236), 26);
@@ -1881,8 +1911,8 @@ function perfOverlay(t0, t1, t2, t1b) {
   pm.frames++; pm.upd = Math.max(pm.upd, t1 - t0); pm.drw = Math.max(pm.drw, t2 - t1b);
   const gap = pm.last ? t0 - pm.last : 0; pm.last = t0; if (gap < 250) pm.worst = Math.max(pm.worst, gap);
   if (t0 - pm.t0 >= 1000) {
-    pm.text = `${pm.frames}fps 計算${pm.upd.toFixed(1)} 音${(pm.aud || 0).toFixed(1)} 描く${pm.drw.toFixed(1)}ms 画質${view.dpr} ${ac ? ac.state : '-'}`;
-    pm.t0 = t0; pm.frames = 0; pm.worst = 0; pm.upd = 0; pm.drw = 0; pm.aud = 0;
+    pm.text = `${pm.frames}fps 計算${pm.upd.toFixed(1)} 音${(pm.aud || 0).toFixed(1)} 声${(pm.spk || 0).toFixed(1)} 描く${pm.drw.toFixed(1)}ms 画質${view.dpr} ${ac ? ac.state : '-'}`;
+    pm.t0 = t0; pm.frames = 0; pm.worst = 0; pm.upd = 0; pm.drw = 0; pm.aud = 0; pm.spk = 0;
   }
   ctx.save(); ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(4, view.h - 24, Math.min(view.w - 8, ctx.measureText(pm.text).width + 12), 20);   // 「はなす」ボタンにかからないよう左下
